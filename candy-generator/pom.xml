@@ -52,50 +52,7 @@
 				</configuration>
 			</plugin>
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-dependency-plugin</artifactId>
-				<executions>
-					<execution>
-                        <?m2e ignore ?>
-						<id>copy-dependencies</id>
-						<phase>package</phase>
-						<goals>
-							<goal>copy-dependencies</goal>
-						</goals>
-						<configuration>
-							<outputDirectory>${project.build.directory}</outputDirectory>
-							<overWriteIfNewer>true</overWriteIfNewer>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<configuration>
-					<archive>
-						<manifest>
-							<mainClass>org.jsweet.CandyTool</mainClass>
-						</manifest>
-					</archive>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
-					<finalName>candy-tool</finalName>
-					<appendAssemblyId>false</appendAssemblyId>
-				</configuration>
-				<executions>
-					<execution>
-						<id>make-assembly</id>
-						<phase>package</phase>
-						<goals>
-							<goal>single</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
 
 		</plugins>
 		<pluginManagement>
@@ -135,53 +92,6 @@
 			</plugins>
 		</pluginManagement>
 	</build>
-	<profiles>
-		<profile>
-			<id>genparser</id>
-			<activation>
-				<activeByDefault>true</activeByDefault>
-			</activation>
-			<build>
-				<plugins>
-                    <plugin>
-                        <?m2e ignore?>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>exec-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>generate-parsers</id>
-                                <phase>generate-sources</phase>
-                                <goals>
-                                    <goal>java</goal>
-                                </goals>
-                                <configuration>
-                                    <mainClass>
-                                        org.jsweet.candyutil.parser.GenerateParser</mainClass>
-                                    <arguments>
-                                        <argument>
-                                            ${project.build.sourceDirectory}</argument>
-                                    </arguments>
-                                    <includePluginDependencies>true</includePluginDependencies>
-                                    <executableDependency>
-                                        <groupId>org.jsweet</groupId>
-                                        <artifactId>jsweet-candy-generator-util</artifactId>
-                                    </executableDependency>
-                                </configuration>
-                            </execution>
-                        </executions>
-                        <dependencies>
-                            <dependency>
-                                <groupId>org.jsweet</groupId>
-                                <artifactId>jsweet-candy-generator-util</artifactId>
-                                <version>${project.version}</version>
-                            </dependency>
-                        </dependencies>
-                    </plugin>
-				</plugins>
-			</build>
-
-		</profile>
-	</profiles>
 	<dependencies>
 		<dependency>
 			<groupId>com.martiansoftware</groupId>

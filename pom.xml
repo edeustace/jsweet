@@ -153,5 +153,6 @@
         <module>candy-generator-util</module>
         <module>candy-generator</module>
         <module>transpiler</module>
+        <module>cli</module>
     </modules>
 </project>

@@ -51,40 +51,6 @@
 					</includes>
 				</configuration>
 			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-source-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>attach-sources</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<configuration>
-					<javadocVersion>1.8</javadocVersion>
-					<sourcepath>src</sourcepath>
-					<encoding>${project.build.sourceEncoding}</encoding>
-					<skip>${skipJavadoc}</skip>
-					<fixTags>all</fixTags>
-					<failOnError>false</failOnError>
-					<reportOutputDirectory>javadoc-out</reportOutputDirectory>
-					<destDir>javadoc-out/ts.core-${project.version}</destDir>
-				</configuration>
-				<executions>
-					<execution>
-						<id>attach-javadocs</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
 		</plugins>
 	</build>
 	<dependencies>

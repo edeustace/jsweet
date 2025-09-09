@@ -7,11 +7,12 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="jsweet-candy-generator" />
+        <module name="jsweet-cli" />
+        <module name="jsweet-transpiler" />
         <module name="jsweet-core-es5" />
         <module name="typescript.java-ts.core" />
         <module name="jsweet-core-es6" />
         <module name="jsweet-candy-generator-util" />
-        <module name="jsweet-transpiler" />
       </profile>
     </annotationProcessing>
   </component>

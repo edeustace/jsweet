@@ -1,0 +1,88 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.jsweet</groupId>
+        <artifactId>jsweet-parent</artifactId>
+        <version>5.0.0-SNAPSHOT</version>
+        <relativePath>../</relativePath>
+    </parent>
+
+	<artifactId>jsweet-cli</artifactId>
+
+	<name>JSweet CLI</name>
+	<description>Simple CLI tool for JSweet</description>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<java.version.release>11</java.version.release>
+		<java.version>1.${java.version.release}</java.version>
+	</properties>
+
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<release>${java.version.release}</release>
+					<compilerVersion>${java.version}</compilerVersion>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+					<encoding>${project.build.sourceEncoding}</encoding>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>org.jsweet.cli.Main</mainClass>
+						</manifest>
+					</archive>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+					<finalName>jsweet-cli</finalName>
+					<appendAssemblyId>false</appendAssemblyId>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<configuration>
+					<mainClass>org.jsweet.cli.Main</mainClass>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>info.picocli</groupId>
+			<artifactId>picocli</artifactId>
+			<version>4.7.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jsweet</groupId>
+			<artifactId>jsweet-transpiler</artifactId>
+			<version>5.0.0-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jsweet</groupId>
+			<artifactId>jsweet-core-es6</artifactId>
+			<version>5.0.0-SNAPSHOT</version>
+		</dependency>
+	</dependencies>
+</project>
