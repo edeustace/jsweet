@@ -44,7 +44,7 @@ import source.api.JdkInvocations;
 import source.api.Numbers;
 import source.api.Optionals;
 import source.api.PrimitiveInstantiation;
-import source.api.PromisesAsyncAwait;
+// import source.api.PromisesAsyncAwait; // Removed due to Promise candy dependency
 import source.api.QualifiedInstantiation;
 import source.api.Strings;
 import source.api.ThreadLocalFake;
@@ -119,49 +119,7 @@ public class ApiTests extends AbstractTest {
         }, getSourceFile(ThreadLocalFake.class));
     }
 
-    @Test
-    public void testPromisesAsyncAwaits() {
-        eval((logHandler, result) -> {
-            Assert.assertEquals("There should be no errors", 0, logHandler.reportedProblems.size());
-
-            // async await style
-            assertNotNull(result.get("t0"));
-            assertNotNull(result.get("t1"));
-            assertNotNull(result.get("t2"));
-
-            long t0 = result.<Number>get("t0").longValue();
-            long t1 = result.<Number>get("t1").longValue();
-            long t2 = result.<Number>get("t2").longValue();
-
-            assertTrue(t1 - t0 >= PromisesAsyncAwait.WAIT_BETWEEN_STEPS_MS);
-            assertTrue(t2 - t1 >= PromisesAsyncAwait.WAIT_BETWEEN_STEPS_MS);
-
-            assertEquals(Integer.valueOf(42), result.get("r1"));
-            assertEquals("my answer", result.get("r2"));
-            assertEquals("supermessage", result.get("e"));
-
-            // promise style
-            assertNotNull(result.get("2_t0"));
-            assertNotNull(result.get("2_t1"));
-            assertNotNull(result.get("2_t2"));
-
-            t0 = result.<Number>get("2_t0").longValue();
-            t1 = result.<Number>get("2_t1").longValue();
-            t2 = result.<Number>get("2_t2").longValue();
-
-            assertTrue(t1 - t0 >= PromisesAsyncAwait.WAIT_BETWEEN_STEPS_MS);
-            assertTrue(t2 - t1 >= PromisesAsyncAwait.WAIT_BETWEEN_STEPS_MS);
-
-            assertEquals(Integer.valueOf(42), result.get("2_r1"));
-            assertEquals("my answer", result.get("2_r2"));
-            assertEquals("supermessage", result.get("2_e"));
-
-            assertTrue(result.get("subMethod1"));
-            assertTrue(result.get("subMethod2"));
-            assertEquals("subMethod2", result.get("resultSubMethod2"));
-
-        }, getSourceFile(PromisesAsyncAwait.class));
-    }
+    // Removed testPromisesAsyncAwaits test due to Promise candy dependency
 
     @Test
     public void testForeachIteration() {

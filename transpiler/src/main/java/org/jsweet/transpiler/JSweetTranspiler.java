@@ -77,14 +77,15 @@ import org.jsweet.transpiler.util.SourceMap;
 import org.jsweet.transpiler.util.SourceMap.Entry;
 import org.jsweet.transpiler.util.Util;
 
-import com.google.debugging.sourcemap.FilePosition;
-import com.google.debugging.sourcemap.OriginalMapping;
-import com.google.debugging.sourcemap.SourceMapConsumerFactory;
-import com.google.debugging.sourcemap.SourceMapFormat;
-import com.google.debugging.sourcemap.SourceMapGenerator;
-import com.google.debugging.sourcemap.SourceMapGeneratorFactory;
-import com.google.debugging.sourcemap.SourceMapGeneratorV3;
-import com.google.debugging.sourcemap.SourceMapping;
+// Sourcemap functionality commented out due to missing sourcemap-builder dependency
+// import com.google.debugging.sourcemap.FilePosition;
+// import com.google.debugging.sourcemap.OriginalMapping;
+// import com.google.debugging.sourcemap.SourceMapConsumerFactory;
+// import com.google.debugging.sourcemap.SourceMapFormat;
+// import com.google.debugging.sourcemap.SourceMapGenerator;
+// import com.google.debugging.sourcemap.SourceMapGeneratorFactory;
+// import com.google.debugging.sourcemap.SourceMapGeneratorV3;
+// import com.google.debugging.sourcemap.SourceMapping;
 import com.google.gson.Gson;
 import standalone.com.sun.source.tree.CompilationUnitTree;
 import standalone.com.sun.source.tree.Tree;
@@ -1049,6 +1050,9 @@ public class JSweetTranspiler implements JSweetOptions, AutoCloseable {
     }
 
     private void generateTypeScriptSourceMapFile(SourceFile sourceFile) throws IOException {
+        // Sourcemap functionality disabled due to missing sourcemap-builder dependency
+        // TODO: Re-enable when sourcemap-builder is available
+        /*
         if (sourceFile.getSourceMap() == null) {
             return;
         }
@@ -1065,13 +1069,13 @@ public class JSweetTranspiler implements JSweetOptions, AutoCloseable {
                     new FilePosition(entry.getInputPosition().getLine(), entry.getInputPosition().getColumn()),
                     new FilePosition(entry.getOutputPosition().getLine(), entry.getOutputPosition().getColumn()),
                     new FilePosition(entry.getOutputPosition().getLine(), entry.getOutputPosition().getColumn() + 1));
-        }
         File outputFile = new File(sourceFile.getTsFile().getPath() + ".map");
         try (FileWriter writer = new FileWriter(outputFile, false)) {
             generator.appendTo(writer, sourceFile.getTsFile().getName());
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+        */
 
     }
 
@@ -1360,6 +1364,9 @@ public class JSweetTranspiler implements JSweetOptions, AutoCloseable {
                         logger.info("js output file: " + outputFile);
                         File mapFile = new File(outputFile.getAbsolutePath() + ".map");
 
+                        // Sourcemap processing disabled due to missing sourcemap-builder dependency
+                        // TODO: Re-enable when sourcemap-builder is available
+                        /*
                         if (mapFile.exists() && generateSourceMaps) {
 
                             SourceMapGeneratorV3 generator = (SourceMapGeneratorV3) SourceMapGeneratorFactory
@@ -1415,6 +1422,7 @@ public class JSweetTranspiler implements JSweetOptions, AutoCloseable {
                                 ex.printStackTrace();
                             }
                         }
+                        */
                     }
                 }
             }

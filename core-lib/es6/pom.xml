@@ -6,12 +6,11 @@
     <parent>
         <groupId>org.jsweet</groupId>
         <artifactId>jsweet-parent</artifactId>
-        <version>4.0.0-SNAPSHOT</version>
+        <version>5.0.0-SNAPSHOT</version>
         <relativePath>../../</relativePath>
     </parent>
 
-	<artifactId>jsweet-core</artifactId>
-	<version>6.3.1-SNAPSHOT</version>
+	<artifactId>jsweet-core-es6</artifactId>
 
 	<name>JSweet Core Lib</name>
 	<description>JavaScript API for JSweet</description>
@@ -154,7 +153,7 @@
 					<encoding>UTF-8</encoding>
 					<fixTags>all</fixTags>
 					<failOnError>false</failOnError>
-                    <!-- leave these options unchanged to place the Javadoc at the right 
+                    <!-- leave these options unchanged to place the Javadoc at the right
 						place for jsweet.org -->
 					<reportOutputDirectory>/var/www/apidocs/org/jsweet</reportOutputDirectory>
 					<destDir>${project.artifactId}/${project.version}</destDir>
@@ -176,7 +175,7 @@
 
 		<pluginManagement>
 			<plugins>
-                <!--This plugin's configuration is used to store Eclipse m2e settings 
+                <!--This plugin's configuration is used to store Eclipse m2e settings
 					only. It has no influence on the Maven build itself. -->
 				<plugin>
 					<groupId>org.eclipse.m2e</groupId>
