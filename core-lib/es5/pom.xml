@@ -12,7 +12,7 @@
 
 	<artifactId>jsweet-core-es5</artifactId>
 
-	<name>JSweet Core Lib</name>
+	<name>JSweet Core Lib ES5</name>
 	<description>JavaScript API for JSweet</description>
     <url>http://www.jsweet.org</url>
 	<properties>
@@ -199,18 +199,6 @@
         </profile>
     </profiles>
 
-	<distributionManagement>
-		<repository>
-			<id>jsweet-release</id>
-			<name>libs-release</name>
-			<url>http://repository.jsweet.org/artifactory/libs-release-local</url>
-		</repository>
-		<snapshotRepository>
-			<id>jsweet-snapshots</id>
-			<name>libs-snapshot</name>
-			<url>http://repository.jsweet.org/artifactory/libs-snapshot-local</url>
-		</snapshotRepository>
-	</distributionManagement>
 	<organization>
 		<name>JSweet</name>
 		<url>http://www.jsweet.org</url>

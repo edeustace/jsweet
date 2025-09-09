@@ -1,0 +1,129 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+JSweet is a Java to TypeScript/JavaScript transpiler that leverages TypeScript to write rich web applications in Java through JavaScript libraries and frameworks. The project consists of several interconnected Maven modules that work together to transpile Java code to TypeScript and JavaScript.
+
+## Build System
+
+The project uses Maven as its primary build system with a multi-module structure:
+
+- **Root**: Parent POM (`pom.xml`) that manages common dependencies and plugin versions
+- **Main modules**: 
+  - `transpiler/`: Core Java to TypeScript/JavaScript compiler
+  - `core-lib/es5/` & `core-lib/es6/`: Core JavaScript APIs for different ECMAScript versions
+  - `candy-generator/`: Tool to generate Java APIs from TypeScript definition files
+  - `candy-generator-util/`: Utilities for candy generation
+  - `typescript.java-ts.core/`: TypeScript integration core
+
+### Common Build Commands
+
+```bash
+# Build entire project
+mvn clean install
+
+# Build specific module (from root)
+mvn clean install -pl transpiler
+
+# Run tests for transpiler module
+cd transpiler && mvn test
+
+# Run specific test
+cd transpiler && mvn test -Dtest=StructuralTests
+
+# Create transpiler JAR with dependencies
+cd transpiler && mvn clean package
+
+# Clean build artifacts
+mvn clean
+```
+
+### Test Commands
+
+Tests are primarily located in `transpiler/src/test/java/` and use JUnit 4. The test framework extends `AbstractTest` class which provides utilities for compilation and evaluation tests.
+
+```bash
+# Run all transpiler tests
+cd transpiler && mvn test
+
+# Run tests with specific pattern
+cd transpiler && mvn test -Dtest="*Structural*"
+
+# Run single test method
+cd transpiler && mvn test -Dtest=StructuralTests#testPrivateFieldNameClashes
+```
+
+## Architecture
+
+### Core Components
+
+1. **JSweetTranspiler** (`transpiler/src/main/java/org/jsweet/transpiler/`): Main transpilation engine
+2. **JSweetCommandLineLauncher** (`transpiler/src/main/java/org/jsweet/JSweetCommandLineLauncher.java`): CLI interface
+3. **Candy System**: Java API definitions for JavaScript libraries (similar to C header files)
+4. **TypeScript Integration**: Uses Microsoft TypeScript compiler for final JavaScript generation
+
+### Module Structure
+
+- `transpiler/src/main/java/org/jsweet/transpiler/`: Core transpilation logic
+  - `TypeScriptAdapter.java`: Bridges to TypeScript compiler  
+  - `Java2TypeScriptTranslator.java`: Main translation logic
+  - `JSweetContext.java`: Transpilation context management
+- `transpiler/src/test/java/`: Test framework and test cases
+  - `org/jsweet/test/transpiler/AbstractTest.java`: Base test class
+  - `source/`: Test source files organized by test category
+
+### Key Concepts
+
+- **Candies**: Java API definitions that bridge JavaScript libraries (similar to TypeScript .d.ts files)
+- **Source-to-source compilation**: Java → TypeScript → JavaScript pipeline
+- **Bridge pattern**: Uses type definitions to allow Java code to call JavaScript APIs
+- **Module support**: Supports various module systems (CommonJS, AMD, UMD)
+
+## Development Workflow
+
+### Testing Framework
+
+JSweet uses a custom testing framework built on JUnit that supports both compilation and evaluation tests:
+
+1. **Compilation tests**: Verify that source code compiles with expected errors/warnings
+2. **Evaluation tests**: Compile and run code, then verify execution results using `$export` macro
+
+Example test structure:
+```java
+@Test
+public void testFeature() {
+    eval((logHandler, r) -> {
+        logHandler.assertNoProblems();
+        assertEquals(expectedValue, r.get("exportedVariable"));
+    }, getSourceFile(TestClass.class));
+}
+```
+
+### Code Organization
+
+- Place test classes in `transpiler/src/test/java/source/` following package structure
+- Test files should match the test method name for automatic discovery
+- Use `$export("name", value)` in test Java code to export values for assertion
+- Tests automatically run with and without modules unless specified otherwise
+
+## Important Files
+
+- `pom.xml`: Root Maven configuration with dependency management
+- `transpiler/pom.xml`: Core transpiler module configuration  
+- `CONTRIBUTING.md`: Contributor guidelines and test writing instructions
+- `doc/jsweet-language-specifications.md`: Comprehensive language documentation
+- `JSweet4.md`: Future development plans and roadmap
+
+## Development Requirements
+
+- Java 11+ (configured in transpiler/pom.xml with release version 11)
+- Maven 3.3.9+ (enforced by maven-enforcer-plugin)
+- Node.js and TypeScript (for final JavaScript generation)
+
+## Repository Branches
+
+- **develop**: Default development branch (uses Git Flow)
+- **master/main**: Production releases
+- Use `git flow feature start <name>` for new features

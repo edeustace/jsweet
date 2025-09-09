@@ -1,0 +1,5 @@
+# Project environment configuration for JSweet CLI
+# This ensures consistent Java and Maven versions across all developers
+[tools]
+java = "zulu-11.82.19.0"
+maven = "latest"
