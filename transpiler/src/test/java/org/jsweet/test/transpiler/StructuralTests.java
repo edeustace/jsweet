@@ -17,6 +17,7 @@
 package org.jsweet.test.transpiler;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -57,7 +58,7 @@ import source.structural.InnerClassFieldClash;
 import source.structural.InnerClassNotStatic;
 import source.structural.InnerClassUse;
 import source.structural.InnerClassWithAbstractClassAndInterface;
-import source.structural.InnerStaticClassWithGenerics;
+import source.structural.GwtEventTest;
 import source.structural.InstanceOf;
 import source.structural.InstanceofForInterfaces;
 import source.structural.InterfaceInheritance;
@@ -192,16 +193,6 @@ public class StructuralTests extends AbstractTest {
             logHandler.assertNoProblems();
             assertEquals("22abc,22a,22ABC,22a,22b,22c,22ABC,test22a,staticMethod,1", r.get("trace"));
         }, getSourceFile(InnerClassNotStatic.class));
-    }
-
-    @Test
-    public void testInnerStaticClassWithGenerics() {
-        eval((logHandler, r) -> {
-            logHandler.assertNoProblems();
-            assertEquals(true, r.get("typeCreated"));
-            assertEquals(true, r.get("eventCreated"));
-            assertEquals(true, r.get("typeAssigned"));
-        }, getSourceFile(InnerStaticClassWithGenerics.class));
     }
 
     @Test

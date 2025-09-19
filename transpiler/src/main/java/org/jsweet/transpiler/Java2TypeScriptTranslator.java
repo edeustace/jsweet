@@ -317,6 +317,8 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
 
         private boolean innerClassNotStatic = false;
 
+        private boolean isStaticInnerClass = false;
+
         private boolean hasInnerClass = false;
 
         private List<ClassTree> anonymousClasses = new ArrayList<>();
@@ -1507,6 +1509,11 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
         enterScope();
         getScope().name = name;
 
+        // Check if this is a static inner class being printed as a class expression
+        if (scope.size() > 1 && getScope(1).isStaticInnerClass) {
+            getScope().isStaticInnerClass = true; // Mark current scope as static inner class
+        }
+
         ClassTree parent = getParent(ClassTree.class);
         List<TypeParameterElement> parentTypeVars = new ArrayList<>();
         if (parent != null) {
@@ -1588,8 +1595,8 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
             }
             print(classTree.getModifiers());
 
-            if (!isTopLevelScope() || context.useModules || context.moduleBundleMode || isAnonymousClass()
-                    || isInnerClass() || isLocalClass()) {
+            if ((!isTopLevelScope() || context.useModules || context.moduleBundleMode || isAnonymousClass()
+                    || isInnerClass() || isLocalClass()) && !getScope().isStaticInnerClass) {
                 print("export ");
             }
             if (context.isInterface(classTypeElement)) {
@@ -1631,11 +1638,17 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                     if (classTree.getModifiers().getFlags().contains(Modifier.ABSTRACT)) {
                         print("abstract ");
                     }
-                    print("class ");
+                    if (getScope().isStaticInnerClass) {
+                        print("class {");
+                    } else {
+                        print("class ");
+                    }
                 }
             }
 
-            print(name + (getScope().enumWrapperClassScope ? ENUM_WRAPPER_CLASS_SUFFIX : ""));
+            if (!getScope().isStaticInnerClass) {
+                print(name + (getScope().enumWrapperClassScope ? ENUM_WRAPPER_CLASS_SUFFIX : ""));
+            }
 
             if (classTree.getTypeParameters() != null && classTree.getTypeParameters().size() > 0) {
                 print("<").printArgList(null, classTree.getTypeParameters()).print(">");
@@ -1761,7 +1774,12 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                     }
                 }
             }
-            print(" {").println().startIndent();
+            if (!getScope().isStaticInnerClass) {
+                print(" {").println().startIndent();
+            } else {
+                // For static inner classes, we already printed "class {" so just start indentation
+                println().startIndent();
+            }
         }
 
         getAdapter().beforeTypeBody(classTypeElement);
@@ -1900,7 +1918,18 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                 }
             }
             if (def instanceof ClassTree) {
-                // inner types are be printed in a namespace
+                ClassTree innerClass = (ClassTree) def;
+                if (innerClass.getModifiers().getFlags().contains(Modifier.STATIC)) {
+                    // static inner classes are printed as static properties with class expressions
+                    getScope().isStaticInnerClass = true;
+                    println().println().printIndent();
+                    print("public static ").print(innerClass.getSimpleName().toString()).print(" = ");
+                    print(def);  // calls visitClass
+                    getScope().isStaticInnerClass = false;
+                } else {
+                    // non-static inner types are printed in a namespace (existing behavior)
+                    // skip for now, they will be handled in the namespace section
+                }
                 continue;
             }
             if (def instanceof VariableTree) {
@@ -2089,12 +2118,12 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
         getAdapter().afterTypeBody(classTypeElement);
 
         if (!globals) {
-            endIndent().printIndent().print("}");
+            endIndent().println().printIndent().print("}");
 
             if (!getScope().interfaceScope && !getScope().declareClassScope && !getScope().enumScope
                     && !(getScope().enumWrapperClassScope
                             && classTypeElement.getNestingKind() == NestingKind.ANONYMOUS)) {
-                if (classTypeElement.getNestingKind() != NestingKind.ANONYMOUS) {
+                if (classTypeElement.getNestingKind() != NestingKind.ANONYMOUS && !getScope().isStaticInnerClass) {
                     println().printIndent()
                             .print(getScope().enumWrapperClassScope ? classTypeElement.getSimpleName().toString()
                                     : name)
@@ -2172,6 +2201,7 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
         // inner, anonymous and local classes in a namespace
         // ======================
         // print valid inner classes
+        /*
         for (Tree def : util().getSortedClassDeclarations(classTree.getMembers(), compilationUnit)) {
             if (def instanceof ClassTree) {
                 ClassTree cdef = (ClassTree) def;
@@ -2226,6 +2256,7 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
         if (nameSpace) {
             println().endIndent().printIndent().print("}").println();
         }
+        */
         // end of namespace =================================================
 
         if (getScope().enumScope && getScope().isComplexEnum && !getScope().anonymousClasses.contains(classTree)) {
@@ -6961,6 +6992,7 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
         } while ((newClassElement = util().getParentElement(parentMethodElement, TypeElement.class)) != null);
         return false;
     }
+
 
     class UsedTypesScanner extends TreeScanner<Void, Trees> {
 

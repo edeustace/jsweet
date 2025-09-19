@@ -23,6 +23,7 @@ import ts.client.diagnostics.DiagnosticEvent;
 import ts.client.diagnostics.IDiagnostic;
 import ts.client.projectinfo.ProjectInfo;
 import ts.cmd.tsc.CompilerOptions;
+import ts.utils.FileUtils;
 
 public class TypeScript2JavaScriptWithTsserverTranspiler extends TypeScript2JavaScriptTranspiler {
 
@@ -96,6 +97,11 @@ public class TypeScript2JavaScriptWithTsserverTranspiler extends TypeScript2Java
 		for (String fileName : sourceFilePaths) {
 			try {
 				Boolean result = client.compileOnSaveEmitFile(fileName, true).get();
+
+				String ts = FileUtils.getContents(new File(fileName));
+//				System.out.println("----- " + fileName + " -----");
+//				System.out.println(ts);
+//				System.out.println("----------");
 				logger.trace("ts compilation [" + fileName + "] result=" + result);
 			} catch (ExecutionException e) {
 				Throwable actualException = e.getCause();
@@ -119,6 +125,8 @@ public class TypeScript2JavaScriptWithTsserverTranspiler extends TypeScript2Java
 					SourcePosition originalPosition = new SourcePosition(fileInError, null,
 							new Position(error.getStartLocation().getLine(), error.getStartLocation().getOffset()));
 					logger.error("TypeScript error: " + error.getFullText() + " at " + originalPosition.getFile() + "("
+							+ originalPosition.getStartLine() + ")");
+					System.out.println("TypeScript error: " + error.getFullText() + " at " + originalPosition.getFile() + "("
 							+ originalPosition.getStartLine() + ")");
 					SourcePosition position = SourceFile.findOriginPosition(originalPosition, tsSourceFiles);
 					if (position == null) {
