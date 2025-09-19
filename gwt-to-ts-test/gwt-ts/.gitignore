@@ -1,0 +1,4 @@
+node_modules
+user-ts/**/*.ts
+!user-ts/index.ts
+.aider*

@@ -145,14 +145,18 @@ public class CompilerService {
             System.out.println("   Derived source root: " + sourceRootPath);
             JSweetFactory factory = new JSNIFactory(sourceRootPath);
 
+            // Set up GWT classpath for compilation
+            String gwtClasspath = getGwtClasspath();
+            System.out.println("🔧 Setting GWT classpath: " + gwtClasspath);
+
             // Create transpiler with factory and output directory
             JSweetTranspiler transpiler = new JSweetTranspiler(
                 factory,
-                null,
-                outputDirectory,
-                null,
-                null,
-                null
+                null, // workingDir
+                outputDirectory, // tsOutputDir
+                null, // jsOutputDir
+                null, // extractedCandiesDir
+                gwtClasspath // classpath
             );
 
             // Configure for ES6 modules (ESM) instead of namespaces
@@ -383,13 +387,18 @@ public class CompilerService {
             );
             System.out.println("   Source root: " + sourceRootPath);
             JSweetFactory factory = new JSNIFactory(sourceRootPath);
+
+            // Set up GWT classpath for compilation
+            String gwtClasspath = getGwtClasspath();
+            System.out.println("🔧 Setting GWT classpath: " + gwtClasspath);
+
             JSweetTranspiler transpiler = new JSweetTranspiler(
                 factory,
-                null,
-                outputDirectory,
-                null,
-                null,
-                null
+                null, // workingDir
+                outputDirectory, // tsOutputDir
+                null, // jsOutputDir
+                null, // extractedCandiesDir
+                gwtClasspath // classpath
             );
 
             // Configure for ES6 modules (ESM) instead of namespaces
@@ -499,5 +508,28 @@ public class CompilerService {
             System.out.println("   Using parent directory as fallback");
             return javaFile.getParent();
         }
+    }
+
+    /**
+     * Get the GWT classpath with gwt-dev.jar and gwt-user.jar
+     * Hardcoded for now to the expected location
+     */
+    private String getGwtClasspath() {
+        // Hardcode the GWT JAR paths relative to project root
+        String gwtDevJar = "gwt-to-ts-test/gwt-2.11.0-jars/gwt-dev.jar";
+        String gwtUserJar = "gwt-to-ts-test/gwt-2.11.0-jars/gwt-user.jar";
+
+        // Check if files exist
+        File devJar = new File(gwtDevJar);
+        File userJar = new File(gwtUserJar);
+
+        if (!devJar.exists()) {
+            System.err.println("⚠️  GWT dev jar not found: " + devJar.getAbsolutePath());
+        }
+        if (!userJar.exists()) {
+            System.err.println("⚠️  GWT user jar not found: " + userJar.getAbsolutePath());
+        }
+
+        return gwtDevJar + File.pathSeparator + gwtUserJar;
     }
 }

@@ -84,5 +84,6 @@
 			<artifactId>jsweet-core-es6</artifactId>
 			<version>5.0.0-SNAPSHOT</version>
 		</dependency>
+		<!-- Local GWT dependencies for compiling GWT source code -->
 	</dependencies>
 </project>
