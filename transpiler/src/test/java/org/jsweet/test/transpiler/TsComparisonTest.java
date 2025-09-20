@@ -32,6 +32,7 @@ import org.junit.Test;
 
 import source.structural.GwtEventTest;
 import source.structural.globalclasses.Globals;
+import source.structural.gwt.GwtEvent;
 import source.tscomparison.AbstractClasses;
 import source.tscomparison.ActualScoping;
 import source.tscomparison.CompileTimeWarnings;
@@ -44,7 +45,7 @@ public class TsComparisonTest extends AbstractTest {
 
 
     @Test
-    public void fooTest(){
+    public void simpleGwtTest(){
 
         SourceFile file = getSourceFile(GwtEventTest.class);
         eval(ModuleKind.es2015, null, file);
@@ -66,6 +67,29 @@ public class TsComparisonTest extends AbstractTest {
 
 
     }
+
+    @Test
+    public void gwtTestTwo() {
+
+        SourceFile file = getSourceFile(GwtEvent.class);
+        eval(ModuleKind.es2015, null, file);
+
+        // ts part
+        TsSourceFile source = getTsSourceFile(file);
+
+
+        // evalTs(getTsSourceFile(file));
+
+        try {
+            String tsContent = FileUtils.readFileToString(file.getTsFile());
+            System.out.println("Generated TypeScript content:");
+            System.out.println(tsContent);
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail("Failed to read TypeScript file: " + e.getMessage());
+        }
+    }
+
     @Ignore
     @Test
     public void strongerTypingTest() {

@@ -1458,6 +1458,10 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                 print(">");
                 return this;
             } else {
+                // Ensure that cross-package type references generate imports
+                if (typeElement instanceof TypeElement && context.useModules) {
+                    ensureModuleIsUsed(typeElement);
+                }
                 return print(typeTree);
             }
         }
@@ -1638,15 +1642,15 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                     if (classTree.getModifiers().getFlags().contains(Modifier.ABSTRACT)) {
                         print("abstract ");
                     }
-                    if (getScope().isStaticInnerClass) {
-                        print("class {");
-                    } else {
-                        print("class ");
-                    }
+                    print("class ");
                 }
             }
 
-            if (!getScope().isStaticInnerClass) {
+            // Print class name (always needed now)
+            if (getScope().isStaticInnerClass) {
+                // For static inner classes, use simple name only
+                print(classTree.getSimpleName().toString() + (getScope().enumWrapperClassScope ? ENUM_WRAPPER_CLASS_SUFFIX : ""));
+            } else {
                 print(name + (getScope().enumWrapperClassScope ? ENUM_WRAPPER_CLASS_SUFFIX : ""));
             }
 
@@ -1774,12 +1778,7 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                     }
                 }
             }
-            if (!getScope().isStaticInnerClass) {
-                print(" {").println().startIndent();
-            } else {
-                // For static inner classes, we already printed "class {" so just start indentation
-                println().startIndent();
-            }
+            print(" {").println().startIndent();
         }
 
         getAdapter().beforeTypeBody(classTypeElement);
@@ -3926,6 +3925,9 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
     }
 
     private boolean doesMemberNameRequireQuotes(String name) {
+        if (name == null) {
+            return false;
+        }
         for (char c : name.toCharArray()) {
             if (TS_IDENTIFIER_FORBIDDEN_CHARS.contains(c)) {
                 return true;
@@ -4178,8 +4180,17 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                 if (memberElement instanceof TypeElement) {
                     if (context.hasClassNameMapping((TypeElement) memberElement)) {
                         fieldName = context.getClassNameMapping((TypeElement) selectedElement);
+                    } else if (fieldName == null) {
+                        // Fallback for TypeElement when getIdentifier returns null (e.g., static inner classes)
+                        fieldName = ((TypeElement) memberElement).getSimpleName().toString();
                     }
                 }
+                
+                // Final fallback if fieldName is still null
+                if (fieldName == null && memberElement != null) {
+                    fieldName = memberElement.getSimpleName().toString();
+                }
+                
                 if (doesMemberNameRequireQuotes(fieldName)) {
                     if (getLastPrintedChar() == '.') {
                         removeLastChar();
@@ -4188,7 +4199,7 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                         print("this['").print(fieldName).print("']");
                     }
                 } else {
-                    print(fieldName);
+                    print(fieldName != null ? fieldName : "undefined");
                 }
                 if (memberElement instanceof VariableElement && isLazyInitialized((VariableElement) memberElement)) {
                     if (!staticInitializedAssignment) {
