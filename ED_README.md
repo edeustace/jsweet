@@ -1,5 +1,14 @@
 # JSweet Development Guide
 
+
+.. todo ..
+
+I don't think the jsni fix is fully working.
+Look at button element as an example.
+user-ts/com/google/gwt/dom/client/ButtonElement.ts:
+or
+/Users/ed.eustace/dev/github.com/ed-eustace/jsweet/gwt-to-ts-test/gwt-ts/user-ts/com/google/gwt/user/client/Window.ts
+
 ## Building the Project
 
 ```bash

@@ -7,6 +7,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import java.util.HashMap;
+import java.util.Map;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
@@ -32,14 +35,23 @@ public class JSNIAdapter extends PrinterAdapter {
 
     // Pattern to match method signatures with JSNI blocks
     private static final Pattern METHOD_JSNI_PATTERN = Pattern.compile(
-        "(?:public|private|protected)?\\s+(?:static\\s+)?(?:native\\s+)(?:\\w+(?:<[^>]*>)?\\s+)(\\w+)\\s*\\([^)]*\\)\\s*/\\*-\\{([\\s\\S]*?)\\}-\\*/",
+        "(?:public|private|protected)?\\s+(?:static\\s+)?(?:native\\s+)(?:\\w+(?:<[^>]*>)?\\s+)(\\w+)\\s*\\(([^)]*)\\)\\s*/\\*-\\{([\\s\\S]*?)\\}-\\*/",
         Pattern.DOTALL | Pattern.MULTILINE
+    );
+
+    // Pattern to match JSNI placeholders in generated TypeScript
+    private static final Pattern JSNI_PLACEHOLDER_PATTERN = Pattern.compile(
+        "//\\s*JSNI_METHOD:(\\w+):(-?\\d+)",
+        Pattern.MULTILINE
     );
 
     private String currentSourceContent = null;
     private String currentSourceClassName = null;
     private final JSNIProcessor jsniProcessor;
     private final String sourceRootPath;
+
+    // Map to cache JSNI methods: className -> {methodName:paramHash -> jsniBody}
+    private final Map<String, Map<String, String>> jsniMethodCache = new HashMap<>();
 
     public JSNIAdapter(PrinterAdapter parentAdapter, String sourceRootPath) {
         super(parentAdapter);
@@ -479,8 +491,266 @@ public class JSNIAdapter extends PrinterAdapter {
     @Override
     public void onTranspilationFinished() {
         System.out.println(
-            "🏁 JSNIAdapter: Transpilation finished - JSNI processing complete"
+            "🏁 JSNIAdapter: Transpilation finished - Starting JSNI post-processing"
         );
+
+        // Post-process generated TypeScript files to replace JSNI placeholders
+        processGeneratedTypeScriptFiles();
+
         super.onTranspilationFinished();
+
+        System.out.println(
+            "✅ JSNIAdapter: JSNI post-processing complete"
+        );
+    }
+
+    /**
+     * Post-process generated TypeScript files to replace JSNI placeholders with actual JavaScript code.
+     */
+    private void processGeneratedTypeScriptFiles() {
+        System.out.println("🔄 JSNIAdapter: Starting TypeScript post-processing for JSNI placeholders");
+
+        try {
+            // Get the current transpiler context to find the output directory
+            String outputPath = getTranspilerOutputPath();
+            if (outputPath == null) {
+                System.out.println("❌ JSNIAdapter: Cannot determine TypeScript output directory");
+                return;
+            }
+
+            Path outputDir = Paths.get(outputPath);
+            System.out.println("📁 JSNIAdapter: Scanning output directory: " + outputDir);
+
+            // Find all .ts files in the output directory and subdirectories
+            try (Stream<Path> tsFiles = Files.walk(outputDir)
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".ts"))) {
+
+                tsFiles.forEach(this::processTypeScriptFile);
+            }
+
+        } catch (IOException e) {
+            System.out.println("❌ JSNIAdapter: Error during post-processing: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Process a single TypeScript file to replace JSNI placeholders.
+     */
+    private void processTypeScriptFile(Path tsFile) {
+        try {
+            System.out.println("🔍 JSNIAdapter: Processing TypeScript file: " + tsFile);
+
+            String content = Files.readString(tsFile);
+            Matcher placeholderMatcher = JSNI_PLACEHOLDER_PATTERN.matcher(content);
+
+            StringBuilder modifiedContent = new StringBuilder();
+            int lastEnd = 0;
+            boolean hasChanges = false;
+
+            while (placeholderMatcher.find()) {
+                String methodName = placeholderMatcher.group(1);
+                String paramHash = placeholderMatcher.group(2);
+
+                System.out.println("🎯 JSNIAdapter: Found JSNI placeholder: " + methodName + ":" + paramHash);
+
+                // Find the corresponding JSNI body
+                String jsniBody = findJsniBody(tsFile, methodName, paramHash);
+
+                if (jsniBody != null) {
+                    System.out.println("✅ JSNIAdapter: Found JSNI body for " + methodName);
+
+                    // Add everything before this placeholder
+                    modifiedContent.append(content, lastEnd, placeholderMatcher.start());
+
+                    // Replace the placeholder with the actual JSNI body
+                    modifiedContent.append(processJsniBodyForTypeScript(jsniBody));
+
+                    lastEnd = placeholderMatcher.end();
+                    hasChanges = true;
+                } else {
+                    System.out.println("⚠️ JSNIAdapter: No JSNI body found for " + methodName + ":" + paramHash);
+                }
+            }
+
+            if (hasChanges) {
+                // Add the remaining content after the last replacement
+                modifiedContent.append(content, lastEnd, content.length());
+
+                // Write the modified content back to the file
+                Files.writeString(tsFile, modifiedContent.toString());
+                System.out.println("✅ JSNIAdapter: Updated TypeScript file with JSNI bodies: " + tsFile);
+            } else {
+                System.out.println("ℹ️ JSNIAdapter: No JSNI placeholders found in: " + tsFile);
+            }
+
+        } catch (IOException e) {
+            System.out.println("❌ JSNIAdapter: Error processing TypeScript file " + tsFile + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Find the JSNI body for a given method name and parameter hash.
+     */
+    private String findJsniBody(Path tsFile, String methodName, String paramHash) {
+        // Determine the Java source file corresponding to this TypeScript file
+        String className = getClassNameFromTsFile(tsFile);
+        if (className == null) {
+            System.out.println("❌ JSNIAdapter: Cannot determine class name for: " + tsFile);
+            return null;
+        }
+
+        // Load JSNI methods from the source if not already cached
+        if (!jsniMethodCache.containsKey(className)) {
+            loadJsniMethodsFromSource(className);
+        }
+
+        Map<String, String> classMethods = jsniMethodCache.get(className);
+        if (classMethods == null) {
+            return null;
+        }
+
+        String methodKey = methodName + ":" + paramHash;
+        return classMethods.get(methodKey);
+    }
+
+    /**
+     * Load all JSNI methods from a Java source file and cache them.
+     */
+    private void loadJsniMethodsFromSource(String className) {
+        System.out.println("📥 JSNIAdapter: Loading JSNI methods from source for: " + className);
+
+        try {
+            String sourceFilePath = getSourceFilePath(className);
+            if (sourceFilePath == null || !Files.exists(Paths.get(sourceFilePath))) {
+                System.out.println("❌ JSNIAdapter: Source file not found for: " + className);
+                return;
+            }
+
+            String sourceContent = Files.readString(Paths.get(sourceFilePath));
+            Map<String, String> methods = new HashMap<>();
+
+            Matcher methodMatcher = METHOD_JSNI_PATTERN.matcher(sourceContent);
+            while (methodMatcher.find()) {
+                String methodName = methodMatcher.group(1);
+                String parameters = methodMatcher.group(2);
+                String jsniBody = methodMatcher.group(3);
+
+                // Generate the same hash as the transpiler
+                String paramHash = generateParameterHash(parameters);
+                String methodKey = methodName + ":" + paramHash;
+
+                methods.put(methodKey, jsniBody.trim());
+                System.out.println("📝 JSNIAdapter: Cached JSNI method: " + methodKey);
+            }
+
+            jsniMethodCache.put(className, methods);
+            System.out.println("✅ JSNIAdapter: Cached " + methods.size() + " JSNI methods for " + className);
+
+        } catch (IOException e) {
+            System.out.println("❌ JSNIAdapter: Error loading JSNI methods for " + className + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Generate parameter hash using the same logic as the transpiler.
+     */
+    private String generateParameterHash(String parameters) {
+        StringBuilder paramSignature = new StringBuilder();
+        if (parameters != null && !parameters.trim().isEmpty()) {
+            String[] params = parameters.split(",");
+            for (String param : params) {
+                String[] parts = param.trim().split("\\s+");
+                if (parts.length >= 2) {
+                    // Use the type (first part) for the signature
+                    paramSignature.append(parts[0]).append(";");
+                }
+            }
+        }
+        return String.valueOf(paramSignature.toString().hashCode());
+    }
+
+    /**
+     * Extract class name from TypeScript file path.
+     * Converts path like "com/example/MyClass.ts" to "com.example.MyClass"
+     */
+    private String getClassNameFromTsFile(Path tsFile) {
+        try {
+            String fileName = tsFile.getFileName().toString();
+            if (!fileName.endsWith(".ts")) {
+                return null;
+            }
+
+            String className = fileName.substring(0, fileName.length() - 3);
+
+            // Get the package path
+            Path parent = tsFile.getParent();
+            if (parent != null) {
+                String packagePath = parent.toString().replace('/', '.').replace('\\', '.');
+                // Remove any leading path components that aren't part of the package
+                if (packagePath.contains("source.")) {
+                    int sourceIndex = packagePath.indexOf("source.");
+                    packagePath = packagePath.substring(sourceIndex);
+                }
+                return packagePath + "." + className;
+            }
+
+            return className;
+        } catch (Exception e) {
+            System.out.println("❌ JSNIAdapter: Error extracting class name from: " + tsFile + " - " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Process JSNI body for insertion into TypeScript.
+     */
+    private String processJsniBodyForTypeScript(String jsniBody) {
+        // Clean up and process the JSNI body using the existing processor
+        String processedJs = jsniProcessor.processJSNI(jsniBody);
+
+        // Format for TypeScript insertion
+        StringBuilder result = new StringBuilder();
+        String[] lines = processedJs.split("\n");
+
+        for (String line : lines) {
+            if (!line.trim().isEmpty()) {
+                result.append(line.trim());
+                if (!line.trim().endsWith(";")) {
+                    result.append(";");
+                }
+                result.append("\n        ");
+            }
+        }
+
+        return result.toString().trim();
+    }
+
+    /**
+     * Get the TypeScript output path from the transpiler context.
+     */
+    private String getTranspilerOutputPath() {
+        // TODO: Find the correct way to access output directory from JSweetContext
+        System.out.println("🔍 JSNIAdapter: Searching for TypeScript output directory...");
+
+        // Fallback: try common output directories based on working directory
+        String[] possiblePaths = {
+            "tempOut",
+            "target/ts",
+            "out",
+            "build/ts"
+        };
+
+        for (String path : possiblePaths) {
+            Path outputPath = Paths.get(path);
+            if (Files.exists(outputPath) && Files.isDirectory(outputPath)) {
+                System.out.println("✅ JSNIAdapter: Using fallback output directory: " + outputPath.toAbsolutePath());
+                return outputPath.toAbsolutePath().toString();
+            }
+        }
+
+        System.out.println("❌ JSNIAdapter: Cannot determine TypeScript output directory");
+        return null;
     }
 }
