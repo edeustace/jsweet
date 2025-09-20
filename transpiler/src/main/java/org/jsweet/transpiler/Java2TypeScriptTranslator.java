@@ -2642,9 +2642,16 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
             }
         }
 
+        // PROTOTYPE: Store JSNI method detection for later use
+        boolean isJsniMethod = methodTree.getModifiers().getFlags().contains(Modifier.NATIVE) && detectJsniMethod(methodTree);
+        if (isJsniMethod) {
+            System.out.println("JSNI DETECTED: " + methodTree.getName() + " in class " + parent.getSimpleName());
+        }
+
+        // Print modifiers normally - will be handled by JSweet's standard modifier printing logic
         print(methodTree.getModifiers());
 
-        if (methodTree.getModifiers().getFlags().contains(Modifier.NATIVE)) {
+        if (methodTree.getModifiers().getFlags().contains(Modifier.NATIVE) && !isJsniMethod) {
             if (!getScope().declareClassScope && !ambient && !getScope().interfaceScope) {
                 report(methodTree, methodTree.getName(), JSweetProblem.NATIVE_MODIFIER_IS_NOT_ALLOWED,
                         methodTree.getName());
@@ -2806,7 +2813,22 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
         if (methodTree.getBody() == null && !(inCoreWrongOverload && !getScope().declareClassScope)
                 || (methodTree.getModifiers().getFlags().contains(Modifier.DEFAULT)
                         && !getScope().defaultMethodScope)) {
-            if (!getScope().interfaceScope && methodTree.getModifiers().getFlags().contains(Modifier.ABSTRACT)
+
+            // PROTOTYPE: Check if this is a JSNI method that needs conversion
+            if (methodTree.getModifiers().getFlags().contains(Modifier.NATIVE) && detectJsniMethod(methodTree)) {
+                // Convert JSNI method to regular method with placeholder
+                String paramHash = generateParameterHash(methodTree);
+                String methodName = methodTree.getName().toString();
+                print(" {").println().startIndent().printIndent();
+                print("// JSNI_METHOD:" + methodName + ":" + paramHash);
+                println().printIndent();
+                // Add placeholder return to satisfy TypeScript
+                if (!methodTree.getReturnType().toString().equals("void")) {
+                    print("return null as any;");
+                }
+                println().endIndent().printIndent().print("}");
+                System.out.println("JSNI CONVERTED: " + methodName + " with hash " + paramHash);
+            } else if (!getScope().interfaceScope && methodTree.getModifiers().getFlags().contains(Modifier.ABSTRACT)
                     && inOverload && !overload.isValid) {
                 print(" {");
                 // runtime error if we go there...
@@ -7150,5 +7172,92 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
             return super.scan(tree, trees);
         }
 
+    }
+
+    /**
+     * PROTOTYPE: Detect if a native method is actually a JSNI method by examining the source.
+     * Looks for JSNI pattern after the method signature.
+     */
+    private boolean detectJsniMethod(MethodTree methodTree) {
+        try {
+            // Get the source lines
+            String[] sourceLines = getGetSource(compilationUnit);
+
+            // We need to find the line where this method ends (after the semicolon)
+            // This is a simplified approach - in production we'd use proper source positions
+            String methodName = methodTree.getName().toString();
+
+            // Look for JSNI pattern in the source
+            for (String line : sourceLines) {
+                if (line.contains(methodName) && line.contains("native") &&
+                    (line.contains("/*-{") || line.contains("}-*/"))) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            // If anything fails, assume not JSNI
+            System.out.println("Error detecting JSNI for " + methodTree.getName() + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * PROTOTYPE: Generate a hash of method parameters for unique identification.
+     */
+    private String generateParameterHash(MethodTree methodTree) {
+        StringBuilder paramSignature = new StringBuilder();
+        for (VariableTree param : methodTree.getParameters()) {
+            paramSignature.append(param.getType().toString()).append(";");
+        }
+        // Simple hash - in production would use proper hashing
+        return String.valueOf(paramSignature.toString().hashCode());
+    }
+
+    /**
+     * PROTOTYPE: Extract JSNI body from source for a given method.
+     */
+    private String extractJsniBody(MethodTree methodTree) {
+        try {
+            String[] sourceLines = getGetSource(compilationUnit);
+            String methodName = methodTree.getName().toString();
+            boolean foundMethod = false;
+            StringBuilder jsniBody = new StringBuilder();
+            boolean insideJsni = false;
+
+            for (String line : sourceLines) {
+                if (line.contains(methodName) && line.contains("native")) {
+                    foundMethod = true;
+                }
+                if (foundMethod && line.contains("/*-{")) {
+                    insideJsni = true;
+                    int start = line.indexOf("/*-{") + 4;
+                    jsniBody.append(line.substring(start));
+                    continue;
+                }
+                if (insideJsni) {
+                    if (line.contains("}-*/")) {
+                        int end = line.indexOf("}-*/");
+                        jsniBody.append(line.substring(0, end));
+                        break;
+                    } else {
+                        jsniBody.append(line);
+                    }
+                }
+            }
+            return jsniBody.toString().trim();
+        } catch (Exception e) {
+            return "// Error extracting JSNI body: " + e.getMessage();
+        }
+    }
+
+    /**
+     * PROTOTYPE: Print modifiers excluding a specific modifier.
+     */
+    private void printModifiersExcluding(standalone.com.sun.source.tree.ModifiersTree modifiers, Modifier excludeModifier) {
+        // Create a new ModifiersTree without the excluded modifier
+        // This is a simplified approach - just print the tree but skip processing the excluded modifier
+        // In a full implementation, we'd create a new ModifiersTree instance
+        // For now, we'll let the regular modifier printing handle it but skip our custom logic
     }
 }

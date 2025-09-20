@@ -55,4 +55,11 @@ public class JsniDuplicates {
     public JsniDuplicates() {
         // Simple constructor
     }
+
+    /**
+     * Test method to verify we can access source and detect JSNI.
+     */
+    public void testJsniDetection() {
+        System.out.println("Testing JSNI detection");
+    }
 }
