@@ -33,6 +33,9 @@ import org.junit.Test;
 import source.structural.GwtEventTest;
 import source.structural.globalclasses.Globals;
 import source.structural.gwt.GwtEvent;
+import source.structural.gwt.JsniDuplicates;
+import source.structural.gwt.client.ui.RootPanel;
+import source.structural.gwt.user.client.ui.AttachDetachException;
 import source.tscomparison.AbstractClasses;
 import source.tscomparison.ActualScoping;
 import source.tscomparison.CompileTimeWarnings;
@@ -110,6 +113,80 @@ public class TsComparisonTest extends AbstractTest {
 
         // ts part
         evalTs(getTsSourceFile(file));
+    }
+
+    @Test
+    public void rootPanelClosingBraceTest() {
+        SourceFile file = getSourceFile(RootPanel.class);
+        eval(ModuleKind.es2015, null, file);
+
+        // Read and print the generated TypeScript to examine the closing brace issue
+        try {
+            String tsContent = FileUtils.readFileToString(file.getTsFile());
+            System.out.println("Generated TypeScript content for RootPanel:");
+            System.out.println(tsContent);
+
+            // Check for basic syntax issues - verify static inner class generates as class expression
+            if (!tsContent.contains("public static DefaultRootPanel = ") ||
+                !tsContent.contains("class DefaultRootPanel extends RootPanel")) {
+                fail("Static inner class not generated as class expression");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail("Failed to read TypeScript file: " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void staticInterfaceTest() {
+        SourceFile file = getSourceFile(AttachDetachException.class);
+        eval(ModuleKind.es2015, null, file);
+
+        // Read and print the generated TypeScript to examine static interface generation
+        try {
+            String tsContent = FileUtils.readFileToString(file.getTsFile());
+            System.out.println("Generated TypeScript content for AttachDetachException:");
+            System.out.println(tsContent);
+
+            // Check for basic syntax issues - verify static interface is generated properly
+            if (!tsContent.contains("interface Command")) {
+                fail("Static interface not generated properly");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail("Failed to read TypeScript file: " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void jsniDuplicatesTest() {
+        SourceFile file = getSourceFile(JsniDuplicates.class);
+        eval(ModuleKind.es2015, null, file);
+
+        // Read and print the generated TypeScript to examine JSNI method overloading
+        try {
+            String tsContent = FileUtils.readFileToString(file.getTsFile());
+            System.out.println("Generated TypeScript content for JsniDuplicates:");
+            System.out.println(tsContent);
+
+            // Check if JSNI methods are generating duplicate signatures
+            long fooMethodCount = tsContent.lines()
+                    .filter(line -> line.trim().matches(".*foo\\s*\\(.*\\).*"))
+                    .count();
+
+            System.out.println("Number of 'foo' method declarations found: " + fooMethodCount);
+
+            // Check if regular methods have proper overloading
+            long barMethodCount = tsContent.lines()
+                    .filter(line -> line.trim().matches(".*bar\\s*\\(.*\\).*"))
+                    .count();
+
+            System.out.println("Number of 'bar' method declarations found: " + barMethodCount);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail("Failed to read TypeScript file: " + e.getMessage());
+        }
     }
 
     @Test

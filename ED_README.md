@@ -10,6 +10,23 @@ mvn clean install -DskipTests
 mvn clean package -pl cli -am -DskipTests
 ```
 
+## Rebuilding After Transpiler Changes
+
+When you make changes to the transpiler and need the CLI to pick them up:
+
+```bash
+# 1. First rebuild the transpiler module with your changes
+mvn clean install -pl transpiler -DskipTests -q
+
+# 2. Then rebuild the CLI module to pick up the updated transpiler
+cd cli && mvn clean compile -DskipTests -q
+
+# 3. Now run your CLI commands - they will use the updated transpiler
+cd .. && mvn exec:java -pl cli -Dexec.args="your-args-here"
+```
+
+**Important**: The CLI module depends on the transpiler module, so you must rebuild the transpiler first, then the CLI to pick up the changes.
+
 ## Running the CLI via Maven
 
 ### Basic Usage

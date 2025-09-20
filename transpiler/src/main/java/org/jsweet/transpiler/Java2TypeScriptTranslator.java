@@ -325,6 +325,8 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
 
         private List<NewClassTree> anonymousClassesConstructors = new ArrayList<>();
 
+        private List<ClassTree> staticInnerInterfaces = new ArrayList<>();
+
         private List<LinkedHashSet<VariableElement>> finalVariables = new ArrayList<>();
 
         private boolean hasConstructorOverloadWithSuperClass;
@@ -1918,8 +1920,19 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
             }
             if (def instanceof ClassTree) {
                 ClassTree innerClass = (ClassTree) def;
+                TypeElement innerClassElement = Util.getTypeElement(innerClass);
+
+                // Check if this is an interface - interfaces should use namespace logic, not class expressions
+                if (context.isInterface(innerClassElement)) {
+                    // Static inner interfaces are collected for namespace generation later
+                    if (innerClass.getModifiers().getFlags().contains(Modifier.STATIC)) {
+                        getScope().staticInnerInterfaces.add(innerClass);
+                    }
+                    continue;
+                }
+
                 if (innerClass.getModifiers().getFlags().contains(Modifier.STATIC)) {
-                    // static inner classes are printed as static properties with class expressions
+                    // static inner classes (not interfaces) are printed as static properties with class expressions
                     getScope().isStaticInnerClass = true;
                     println().println().printIndent();
                     print("public static ").print(innerClass.getSimpleName().toString()).print(" = ");
@@ -2133,7 +2146,7 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                 }
                 Set<String> interfaces = new HashSet<>();
                 context.grabSupportedInterfaceNames(interfaces, classTypeElement, getAdapter());
-                if (!interfaces.isEmpty()) {
+                if (!interfaces.isEmpty() && !getScope().isStaticInnerClass) {
                     println().printIndent()
                             .print(getScope().enumWrapperClassScope ? classTypeElement.getSimpleName().toString()
                                     : name)
@@ -2257,6 +2270,68 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
         }
         */
         // end of namespace =================================================
+
+        // Generate namespaces for static inner interfaces
+        for (ClassTree staticInterface : getScope().staticInnerInterfaces) {
+            TypeElement interfaceElement = Util.getTypeElement(staticInterface);
+            String interfaceName = interfaceElement.getSimpleName().toString();
+            String parentClassName = classTypeElement.getSimpleName().toString();
+
+            println().println().printIndent();
+            if (!isTopLevelScope() || context.useModules || context.moduleBundleMode) {
+                print("export ");
+            }
+            print("namespace ").print(parentClassName).print(" {").startIndent();
+
+            // Manually generate the interface declaration within the namespace
+            println().printIndent();
+            printDocComment(staticInterface);
+            printIndent().print("export interface ").print(interfaceName);
+
+            // Handle extends clause if any
+            if (staticInterface.getExtendsClause() != null) {
+                print(" extends ");
+                print(staticInterface.getExtendsClause());
+            }
+
+            print(" {").startIndent();
+
+            // Print interface members (methods and fields)
+            for (Tree member : staticInterface.getMembers()) {
+                if (member instanceof MethodTree) {
+                    MethodTree method = (MethodTree) member;
+                    Element memberElement = Util.getElementNoErrors(method);
+                    // Skip static members in interfaces - they belong in the namespace itself
+                    if (memberElement != null && memberElement.getModifiers().contains(Modifier.STATIC)) {
+                        continue;
+                    }
+                    println().printIndent();
+                    printDocComment(method);
+                    printIndent().print(method.getName().toString()).print("(");
+
+                    // Print parameters
+                    boolean first = true;
+                    for (VariableTree param : method.getParameters()) {
+                        if (!first) print(", ");
+                        print(param.getName().toString()).print(": ");
+                        print(param.getType());
+                        first = false;
+                    }
+                    print(")");
+
+                    // Print return type if not void
+                    if (method.getReturnType() != null && !"void".equals(method.getReturnType().toString())) {
+                        print(": ");
+                        print(method.getReturnType());
+                    }
+                    print(";");
+                }
+            }
+
+            println().endIndent().printIndent().print("}");
+
+            println().endIndent().printIndent().print("}").println();
+        }
 
         if (getScope().enumScope && getScope().isComplexEnum && !getScope().anonymousClasses.contains(classTree)) {
             println().printIndent().print(classTypeElement.getSimpleName().toString()).print(
