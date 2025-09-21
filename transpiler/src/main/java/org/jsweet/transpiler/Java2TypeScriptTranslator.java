@@ -326,6 +326,7 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
         private List<NewClassTree> anonymousClassesConstructors = new ArrayList<>();
 
         private List<ClassTree> staticInnerInterfaces = new ArrayList<>();
+        private List<ClassTree> staticInnerAbstractClasses = new ArrayList<>();
 
         private List<LinkedHashSet<VariableElement>> finalVariables = new ArrayList<>();
 
@@ -1595,7 +1596,10 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                 return returnNothing();
             }
             if (!(classTree.getKind() == Kind.ENUM && scope.size() > 1 && getScope(1).isComplexEnum)) {
-                printDocComment(classTree);
+                // Skip DocComment for static inner classes to avoid syntax errors in class expressions
+                if (!getScope().isStaticInnerClass) {
+                    printDocComment(classTree);
+                }
             } else {
                 print("/** @ignore */").println().printIndent();
             }
@@ -1932,12 +1936,22 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                 }
 
                 if (innerClass.getModifiers().getFlags().contains(Modifier.STATIC)) {
-                    // static inner classes (not interfaces) are printed as static properties with class expressions
-                    getScope().isStaticInnerClass = true;
-                    println().println().printIndent();
-                    print("public static ").print(innerClass.getSimpleName().toString()).print(" = ");
-                    print(def);  // calls visitClass
-                    getScope().isStaticInnerClass = false;
+                    // Check if this is an abstract class - abstract classes cannot be class expressions
+                    if (innerClass.getModifiers().getFlags().contains(Modifier.ABSTRACT)) {
+                        // Abstract static inner classes are collected for namespace generation later
+                        getScope().staticInnerAbstractClasses.add(innerClass);
+                    } else if (getScope().interfaceScope) {
+                        // Static classes inside interfaces cannot be class expressions in TypeScript
+                        // They are collected for namespace generation later
+                        getScope().staticInnerAbstractClasses.add(innerClass);
+                    } else {
+                        // static inner classes (not interfaces, abstract, or inside interfaces) are printed as static properties with class expressions
+                        getScope().isStaticInnerClass = true;
+                        println().println().printIndent();
+                        print("public static ").print(innerClass.getSimpleName().toString()).print(" = ");
+                        print(def);  // calls visitClass
+                        getScope().isStaticInnerClass = false;
+                    }
                 } else {
                     // non-static inner types are printed in a namespace (existing behavior)
                     // skip for now, they will be handled in the namespace section
@@ -2327,6 +2341,46 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                     print(";");
                 }
             }
+
+            println().endIndent().printIndent().print("}");
+
+            println().endIndent().printIndent().print("}").println();
+        }
+
+        // Generate namespaces for static inner classes (both abstract and inside interfaces)
+        for (ClassTree staticClass : getScope().staticInnerAbstractClasses) {
+            TypeElement staticClassElement = Util.getTypeElement(staticClass);
+            String className = staticClassElement.getSimpleName().toString();
+            String parentClassName = classTypeElement.getSimpleName().toString();
+
+            println().println().printIndent();
+            if (!isTopLevelScope() || context.useModules || context.moduleBundleMode) {
+                print("export ");
+            }
+            print("namespace ").print(parentClassName).print(" {").startIndent();
+
+            // Generate the class declaration within the namespace (without DocComment)
+            println().printIndent();
+            printIndent().print("export ");
+
+            // Add abstract modifier only if the class is actually abstract
+            if (staticClass.getModifiers().getFlags().contains(Modifier.ABSTRACT)) {
+                print("abstract ");
+            }
+
+            print("class ").print(className);
+
+            // Handle extends clause if any
+            if (staticClass.getExtendsClause() != null) {
+                print(" extends ");
+                print(staticClass.getExtendsClause());
+            }
+
+            print(" {").startIndent();
+
+            // For now, just generate an empty class body
+            // TODO: Implement full member generation if needed
+            println().printIndent().print("// Members would be generated here");
 
             println().endIndent().printIndent().print("}");
 
@@ -2816,18 +2870,21 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
 
             // PROTOTYPE: Check if this is a JSNI method that needs conversion
             if (methodTree.getModifiers().getFlags().contains(Modifier.NATIVE) && detectJsniMethod(methodTree)) {
-                // Convert JSNI method to regular method with placeholder
-                String paramHash = generateParameterHash(methodTree);
+                // Extract JSNI body from source code
+                String jsniBody = extractJsniBody(methodTree);
                 String methodName = methodTree.getName().toString();
+
                 print(" {").println().startIndent().printIndent();
-                print("// JSNI_METHOD:" + methodName + ":" + paramHash);
-                println().printIndent();
-                // Add placeholder return to satisfy TypeScript
-                if (!methodTree.getReturnType().toString().equals("void")) {
-                    print("return null as any;");
+                if (jsniBody != null && !jsniBody.trim().isEmpty()) {
+                    print("/* JSNI_METHOD_BEGIN").println();
+                    print(jsniBody);
+                    println().printIndent().print("JSNI_METHOD_END */");
+                } else {
+                    print("// JSNI method body not found");
                 }
                 println().endIndent().printIndent().print("}");
-                System.out.println("JSNI CONVERTED: " + methodName + " with hash " + paramHash);
+                System.out.println("JSNI CONVERTED: " + methodName + " with JSNI body");
+                return returnNothing(); // Don't process further - JSNI method is complete
             } else if (!getScope().interfaceScope && methodTree.getModifiers().getFlags().contains(Modifier.ABSTRACT)
                     && inOverload && !overload.isValid) {
                 print(" {");
@@ -7232,16 +7289,22 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                 if (foundMethod && line.contains("/*-{")) {
                     insideJsni = true;
                     int start = line.indexOf("/*-{") + 4;
-                    jsniBody.append(line.substring(start));
+                    String firstLineContent = line.substring(start);
+                    if (!firstLineContent.trim().isEmpty()) {
+                        jsniBody.append(firstLineContent).append("\n");
+                    }
                     continue;
                 }
                 if (insideJsni) {
                     if (line.contains("}-*/")) {
                         int end = line.indexOf("}-*/");
-                        jsniBody.append(line.substring(0, end));
+                        String lastLineContent = line.substring(0, end);
+                        if (!lastLineContent.trim().isEmpty()) {
+                            jsniBody.append(lastLineContent);
+                        }
                         break;
                     } else {
-                        jsniBody.append(line);
+                        jsniBody.append(line).append("\n");
                     }
                 }
             }

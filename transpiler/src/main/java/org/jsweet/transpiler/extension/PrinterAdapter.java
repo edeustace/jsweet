@@ -1066,6 +1066,21 @@ public class PrinterAdapter {
     }
 
     /**
+     * This method is called just before writing TypeScript content for a compilation unit.
+     * Allows adapters to modify the generated TypeScript before it's written to file.
+     *
+     * @param compilationUnit the compilation unit being written
+     * @param tsContent the TypeScript content about to be written
+     * @return the modified TypeScript content to write (or the same content if no changes)
+     */
+    public String onBeforeWriteType(CompilationUnitTree compilationUnit, String tsContent) {
+        if (parentAdapter != null) {
+            return parentAdapter.onBeforeWriteType(compilationUnit, tsContent);
+        }
+        return tsContent;
+    }
+
+    /**
      * This method is called before starting printing a compilation unit (its namespace and content).
      * getCompilationUnit() is available on this adapter at this stage.
      */

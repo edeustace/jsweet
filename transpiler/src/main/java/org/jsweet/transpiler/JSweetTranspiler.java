@@ -1025,7 +1025,12 @@ public class JSweetTranspiler implements JSweetOptions, AutoCloseable {
                         out.println(line);
                     }
                     out.print(headers);
-                    out.println(printer.getResult());
+
+                    // Allow adapters to modify TypeScript content before writing
+                    String tsContent = printer.getResult();
+                    String processedContent = adapter.onBeforeWriteType(cu, tsContent);
+                    out.println(processedContent);
+
                     out.print(context.getGlobalsMappingString());
                     out.print(context.getFooterStatements());
                 } finally {
