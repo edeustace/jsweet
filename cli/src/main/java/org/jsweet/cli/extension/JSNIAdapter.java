@@ -73,40 +73,19 @@ public class JSNIAdapter extends PrinterAdapter {
             method.getSimpleName()
         );
 
-        // Check if this is a native method
+        // NEW APPROACH: Don't substitute method bodies at AST level
+        // Let the transpiler's JSNI conversion logic handle native methods
+        // We'll do post-processing later to replace JSNI placeholders
+
         if (method.getModifiers().contains(Modifier.NATIVE)) {
             System.out.println(
-                "✅ JSNIAdapter: Found native method in substituteMethodBody: " +
+                "🔄 JSNIAdapter: Found native method, letting transpiler handle conversion: " +
                 method.getSimpleName()
             );
-
-            // Try to find JSNI block in the source
-            String jsniCode = extractJSNICode(method);
-            if (jsniCode != null) {
-                System.out.println(
-                    "🎯 JSNIAdapter: Found JSNI code for " +
-                    method.getSimpleName()
-                );
-                System.out.println("   Raw JavaScript: " + jsniCode.trim());
-
-                // Process the JSNI code to clean up GWT-style references
-                String processedJs = jsniProcessor.processJSNI(jsniCode);
-                System.out.println(
-                    "   Processed JavaScript: " + processedJs.trim()
-                );
-
-                // Inject the processed JavaScript code
-                injectJavaScriptCode(processedJs);
-                return true;
-            } else {
-                System.out.println(
-                    "⚠️ JSNIAdapter: No JSNI block found for native method: " +
-                    method.getSimpleName()
-                );
-            }
+            // Don't substitute - let the transpiler generate placeholders
         }
 
-        // Delegate to parent adapter if not handled
+        // Always delegate to parent adapter - don't substitute at AST level
         return super.substituteMethodBody(parentTypeElement, method);
     }
 
@@ -117,35 +96,19 @@ public class JSNIAdapter extends PrinterAdapter {
             executable.getSimpleName()
         );
 
-        // Check if this is a native method
+        // NEW APPROACH: Don't substitute executables at AST level
+        // Let the transpiler's JSNI conversion logic handle native methods
+        // We'll do post-processing later to replace JSNI placeholders
+
         if (executable.getModifiers().contains(Modifier.NATIVE)) {
             System.out.println(
-                "✅ JSNIAdapter: Found native executable: " +
+                "🔄 JSNIAdapter: Found native method, letting transpiler handle conversion: " +
                 executable.getSimpleName()
             );
-
-            // Try to find JSNI block in the source
-            String jsniCode = extractJSNICode(executable);
-            if (jsniCode != null) {
-                System.out.println(
-                    "🎯 JSNIAdapter: Found JSNI code for executable " +
-                    executable.getSimpleName()
-                );
-                System.out.println("   Raw JavaScript: " + jsniCode.trim());
-
-                // Process the JSNI code to clean up GWT-style references
-                String processedJs = jsniProcessor.processJSNI(jsniCode);
-                System.out.println(
-                    "   Processed JavaScript: " + processedJs.trim()
-                );
-
-                // Print the method signature and body
-                printMethodWithJSNI(executable, processedJs);
-                return true;
-            }
+            // Don't substitute - let the transpiler generate placeholders
         }
 
-        // Delegate to parent adapter if not handled
+        // Always delegate to parent adapter - don't substitute at AST level
         return super.substituteExecutable(executable);
     }
 

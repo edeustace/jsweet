@@ -35,6 +35,7 @@ import source.structural.globalclasses.Globals;
 import source.structural.gwt.GwtEvent;
 import source.structural.gwt.JsniDuplicates;
 import source.structural.gwt.client.ui.RootPanel;
+import source.structural.gwt.dom.client.ButtonElement;
 import source.structural.gwt.user.client.ui.AttachDetachException;
 import source.tscomparison.AbstractClasses;
 import source.tscomparison.ActualScoping;
@@ -182,6 +183,42 @@ public class TsComparisonTest extends AbstractTest {
                     .count();
 
             System.out.println("Number of 'bar' method declarations found: " + barMethodCount);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail("Failed to read TypeScript file: " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void buttonElementTest() {
+        SourceFile file = getSourceFile(ButtonElement.class);
+        eval(ModuleKind.es2015, null, file);
+
+        // Read and print the generated TypeScript to examine ButtonElement JSNI conversion
+        try {
+            String tsContent = FileUtils.readFileToString(file.getTsFile());
+            System.out.println("Generated TypeScript content for ButtonElement:");
+            System.out.println(tsContent);
+
+            // Check if JSNI methods are being converted to regular methods with placeholders
+            long jsniPlaceholderCount = tsContent.lines()
+                    .filter(line -> line.trim().contains("JSNI_METHOD:"))
+                    .count();
+
+            System.out.println("Number of JSNI placeholders found: " + jsniPlaceholderCount);
+
+            // Check if we have the expected overload dispatcher methods
+            boolean hasGetDisabledOverload = tsContent.contains("public getDisabled(") &&
+                                           tsContent.contains("getDisabled$java_lang_String") &&
+                                           tsContent.contains("getDisabled$boolean");
+
+            boolean hasSetDisabledOverload = tsContent.contains("public setDisabled(") &&
+                                           tsContent.contains("setDisabled$java_lang_String") &&
+                                           tsContent.contains("setDisabled$boolean");
+
+            System.out.println("Has getDisabled overload dispatcher: " + hasGetDisabledOverload);
+            System.out.println("Has setDisabled overload dispatcher: " + hasSetDisabledOverload);
 
         } catch (Exception e) {
             e.printStackTrace();
