@@ -33,12 +33,16 @@ public class JSNIFactory extends JSweetFactory {
         PrinterAdapter baseAdapter = super.createAdapter(context);
         System.out.println("   Got base adapter from parent factory");
 
+        // Chain our EmptyRegisterEntryAdapter first
+        System.out.println("   Chaining EmptyRegisterEntryAdapter");
+        EmptyRegisterEntryAdapter emptyRegisterEntryAdapter = new EmptyRegisterEntryAdapter(baseAdapter);
+
         // Chain our JSNI adapter on top with source root path
-        System.out.println("   Chaining JSNIAdapter on top of base adapter");
-        JSNIAdapter jsniAdapter = new JSNIAdapter(baseAdapter, sourceRootPath);
+        System.out.println("   Chaining JSNIAdapter on top of EmptyRegisterEntryAdapter");
+        JSNIAdapter jsniAdapter = new JSNIAdapter(emptyRegisterEntryAdapter, sourceRootPath);
 
         System.out.println(
-            "✅ JSNIFactory: Adapter chain complete - JSNI support enabled"
+            "✅ JSNIFactory: Adapter chain complete - JSNI support and EmptyRegisterEntry enabled"
         );
         return jsniAdapter;
     }
