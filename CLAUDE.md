@@ -4,7 +4,54 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-JSweet is a Java to TypeScript/JavaScript transpiler that leverages TypeScript to write rich web applications in Java through JavaScript libraries and frameworks. The project consists of several interconnected Maven modules that work together to transpile Java code to TypeScript and JavaScript.
+This project is an exploration of porting GWT (Google Web Toolkit) from Java to TypeScript.
+
+It so happens that this project is a fork of JSweet (http://www.jsweet.org), a Java to TypeScript/JavaScript transpiler. 
+It is like this because JSweet was getting us pretty close to what we wanted. That said, other tooling can be used as part of the pipeline (for example we could look at add vite plugins on the TS side etc).
+
+## The goal
+
+Convert the GWT User runtime to TypeScript. Compile that TypeScript using vite/esbuild and run it in a browser.
+
+Success is being able to render a simple Hello World app using the ported GWT Typescript runtime.
+
+### How 
+
+Currently we're focusing on porting as much of gwt-user as we can - 1:1. 
+I dont think this is 100% possible nor necessary, so we will need to do some analysis and see if there are any parts of the porting that we can stub out.
+
+* An example - There seems to be some code that is only there for the old GWT compiler. Maybe that can be stubbed out?
+* 
+
+
+# Current Pipeline
+
+1. Run jsweet on gwt user codebase (add adapters as needed) - convert to ts and place in gwt-to-ts-test/gwt-ts/user-ts.
+2. Run `pnpm vite build` in sample-ts (which depents on user-ts).
+3. Look for ts compile errors - or runtime errors in the browser.
+
+We have a few places where we can fix things, we can add adapters in jsweet, we can fix the jsweet transpiler itself, or we can start looking at post-processing the ts (aka in vite).
+
+As a rule - jsweet fixes should be considered framework fixes, and should be applicable to typescript conversion in general.
+Adapters can be used to hook into the jsweet flow, and is best suited for custom gwt specific tweaks (eg JSNI, or skipping bits of code)
+Post processing could be an option too, say we want to stub out some class, we could get that copied in before running vite etc? Or the circular dependencies issue could be fixed like that?
+
+# What works - what's todo..
+- [x] JSNI - in jsweet we add the method body as a comment, then in our adapter we strip out the comment tags and set the raw javascript.
+- [x] Static inner classes - we've updated the transpiler to render these correctly.
+- [ ] Circular dependencies - I had another repo where we just merged the 2 dependees into 1 module, may do that post processing? 
+- [ ] Namespace ]
+Below is the JSweet info .. build etc. 
+
+## Mvn run cli 
+
+You can run the cli like so:
+```bash 
+mvn exec:java -pl cli -Dexec.args="--output gwt-to-ts-test/gwt-ts/user-ts --target ES5 --excludes *bindery* --excludes *webgl* --excludes *websocket* --excludes *hibernate* --excludes *javax/validation* --excludes *validation* --excludes *logging --excludes *i18n* --excludes *rpc* --excludes *requestfactory* --excludes *autobean* --excludes *editor* --excludes *safehtml* --excludes *aria* --excludes dom/builder --excludes *junit* --excludes **/server/** --excludes **/vm/** gwt-to-ts-test/gwt-2.11.0/user/src"
+```
+Note that you can exclude pacakges etc.
+
+
 
 ## Build System
 

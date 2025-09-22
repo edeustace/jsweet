@@ -13,11 +13,11 @@ import { JsArrayString } from "../JsArrayString";
 const $wnd = window;
 window.$wnd = $wnd;
 
-export namespace StackTraceCreatorNamespace {
-  export abstract class Collector {
-    // Members would be generated here
-  }
-}
+// export namespace StackTraceCreator {
+//   export abstract class Collector {
+//     // Members would be generated here
+//   }
+// }
 
 export class StackTraceCreator {
   static __static_initialized: boolean = false;
@@ -50,7 +50,7 @@ export class StackTraceCreator {
    */
   static UNKNOWN: string = "Unknown";
 
-  public static CollectorLegacy = class CollectorLegacy extends StackTraceCreatorNamespace.Collector {
+  public static CollectorLegacy = class CollectorLegacy extends StackTraceCreator.Collector {
     /**
      *
      * @param {*} error
@@ -486,6 +486,12 @@ export class StackTraceCreator {
     return [];
   }
 }
+export namespace StackTraceCreator {
+  export abstract class Collector {
+    // Members would be generated here
+  }
+}
+
 StackTraceCreator["__class"] =
   "com.google.gwt.core.client.impl.StackTraceCreator";
 
