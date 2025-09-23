@@ -89,14 +89,51 @@ class GWTFactory {
 }
 ```
 
-#### Option 2: Direct Replacement via JSweet Adapters
-Use JSweet adapters to replace `GWT.create()` calls during transpilation:
-```java
-// Original:
-static final DOMImpl impl = GWT.create(DOMImpl.class);
+#### Option 2: Direct Replacement via JSweet Adapters (Recommended)
+Use JSweet adapters to replace `GWT.create()` calls during transpilation. This is the cleanest approach as it:
+- **Reduces TypeScript output** - Removes unused browser-specific code
+- **Cleans imports** - Strips out unnecessary dependencies  
+- **Simplifies debugging** - Less generated code to wade through
+- **Faster compilation** - Less code for TypeScript compiler to process
 
-// Adapter transforms to:
-static final DOMImpl impl = new DOMImplStandard();
+```java
+// JSweet Adapter Implementation
+public class GWTStubAdapter extends JSweetAdapter {
+  
+  @Override
+  public boolean visitMethodInvocation(MethodInvocation invocation) {
+    if (isGWTCreate(invocation)) {
+      // Replace GWT.create(Foo.class) with new FooModernImpl()
+      replaceWithModernImplementation(invocation);
+      return false; // Don't process further
+    }
+    
+    if (isGWTEnvironmentMethod(invocation)) {
+      // Replace GWT.isClient() -> true, GWT.isProdMode() -> true, etc.
+      replaceWithConstant(invocation);
+      return false;
+    }
+    
+    return super.visitMethodInvocation(invocation);
+  }
+  
+  private void replaceWithModernImplementation(MethodInvocation invocation) {
+    // Logic to map Class literal to modern implementation
+  }
+}
+```
+
+**Transformation examples:**
+```java
+// Original Java:
+static final DOMImpl impl = GWT.create(DOMImpl.class);
+if (GWT.isClient()) { doClientStuff(); }
+GWT.log("Debug message");
+
+// Generated TypeScript (after adapter):
+static impl: DOMImpl = new DOMImplStandard();
+doClientStuff(); // if condition removed entirely
+console.log("Debug message");
 ```
 
 #### Option 3: Static Analysis + Code Generation

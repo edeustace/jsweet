@@ -31,6 +31,7 @@ import org.jsweet.transpiler.extension.Java2TypeScriptAdapter;
 import org.jsweet.transpiler.extension.MapAdapter;
 import org.jsweet.transpiler.extension.PrinterAdapter;
 import org.jsweet.transpiler.extension.RemoveJavaDependenciesAdapter;
+import org.jsweet.transpiler.extension.GWTCreateAdapter;
 import org.jsweet.transpiler.model.ExtendedElement;
 import org.jsweet.transpiler.model.ImportElement;
 import org.junit.Assert;
@@ -46,6 +47,11 @@ import source.extension.IAddNumber;
 import source.extension.Maps;
 import source.extension.ToBeSorted;
 import source.extension.UseOfGlobalVariable;
+import source.gwt.FooContainer;
+import source.gwt.Foo;
+import source.gwt.FooImpl;
+import source.gwt.GWT;
+import source.gwt.TestClient;
 
 class TestFactory extends JSweetFactory {
 
@@ -439,6 +445,38 @@ public class ExtensionTests extends AbstractTest {
                 }
             }
         }, getSourceFile(IAddNumber.class), getSourceFile(AbstractClassWithBigDec.class));
+    }
+
+    @Test
+    public void testGWTCreateAdapter() throws IOException {
+        TranspilerTestRunner transpilerTest = new TranspilerTestRunner(getCurrentTestOutDir(), new JSweetFactory() {
+            @Override
+            public PrinterAdapter createAdapter(JSweetContext context) {
+                return new GWTCreateAdapter(super.createAdapter(context));
+            }
+        });
+
+        SourceFile fooContainerFile = getSourceFile(FooContainer.class);
+        SourceFile fooFile = getSourceFile(Foo.class);
+        SourceFile fooImplFile = getSourceFile(FooImpl.class);
+        SourceFile gwtFile = getSourceFile(GWT.class);
+        SourceFile testClientFile = getSourceFile(TestClient.class);
+
+        transpilerTest.transpile(ModuleKind.commonjs, logHandler -> {
+            logHandler.assertNoProblems();
+        }, fooContainerFile, fooFile, fooImplFile, gwtFile, testClientFile);
+
+        // Check that GWT.create() calls were replaced with direct instantiation
+        String generatedCode = FileUtils.readFileToString(fooContainerFile.getTsFile());
+
+        // Should contain "new FooImpl()" instead of "GWT.create(Foo.class)"
+        Assert.assertTrue("Generated code should contain 'new FooImpl()'",
+                          generatedCode.contains("new FooImpl()"));
+        Assert.assertFalse("Generated code should not contain 'GWT.create(' (method call)",
+                           generatedCode.contains("GWT.create("));
+        // Check that the macro comment is present, indicating our adapter ran
+        Assert.assertTrue("Generated code should contain the GWT.create macro comment",
+                          generatedCode.contains("/* GWT.create */"));
     }
 
 }
