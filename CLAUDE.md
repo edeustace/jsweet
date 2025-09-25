@@ -175,3 +175,4 @@ public void testFeature() {
 - **master/main**: Production releases
 - Use `git flow feature start <name>` for new features
 - if i show an issue w/ generated ts - don't fix the generated ts. we need to look at the source java and the transpiler to see how to fix
+- never fix generated ts

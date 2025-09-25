@@ -1,0 +1,9 @@
+file: /Users/ed.eustace/dev/github.com/ed-eustace/jsweet/gwt-to-ts-test/gwt-ts/user-ts/com/google/gwt/user/client/ui/HasHorizontalAlignment.ts:107:11
+
+Expected ";" but found "function"
+105|
+106|  export class HorizontalAlignmentConstant extends HasHorizontalAlignment.AutoHorizontalAlignmentConstant {
+107|      export function endOf(direction: HasDirection.Direction): HasHorizontalAlignment.HorizontalAlignmentConstant {
+   |             ^
+108|          return direction === HasDirection.Direction.LTR ? HasHorizontalAlignment.ALIGN_RIGHT : direction === HasDirection.Direction.RTL ? HasHorizontalAlignment.ALIGN_LEFT : HasHorizontalAlignment.ALIGN_LOCALE_END;
+109|      }

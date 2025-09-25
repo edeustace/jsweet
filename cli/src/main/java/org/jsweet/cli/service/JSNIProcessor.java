@@ -28,6 +28,12 @@ public class JSNIProcessor {
         Pattern.MULTILINE
     );
 
+    // Pattern for static method references without args: @package.ClassName::methodName(signature)
+    private static final Pattern STATIC_METHOD_REF_PATTERN = Pattern.compile(
+        "@([\\w.]+)::(\\w+)\\([^)]*\\)",
+        Pattern.MULTILINE
+    );
+
     // Pattern for instance field access: obj.@package.ClassName::fieldName
     private static final Pattern INSTANCE_FIELD_PATTERN = Pattern.compile(
         "(\\w+)\\.@([\\w.]+)::(\\w+)",
@@ -70,10 +76,13 @@ public class JSNIProcessor {
         // 3. Static method calls: @JSNIExample::staticFoo(Ljava/lang/String;)(s)
         processed = processStaticMethodCalls(processed);
 
-        // 4. Instance field access: this.@JSNIExample::myInstanceField
+        // 4. Static method references: @JSNIExample::staticFoo(*)
+        processed = processStaticMethodReferences(processed);
+
+        // 5. Instance field access: this.@JSNIExample::myInstanceField
         processed = processInstanceFieldAccess(processed);
 
-        // 5. Static field access: @JSNIExample::myStaticField
+        // 6. Static field access: @JSNIExample::myStaticField
         processed = processStaticFieldAccess(processed);
 
         return processed;
@@ -167,6 +176,35 @@ public class JSNIProcessor {
     }
 
     /**
+     * Transform static method references from JSNI to JavaScript.
+     * @JSNIExample::staticFoo(*) → JSNIExample.staticFoo
+     */
+    private String processStaticMethodReferences(String code) {
+        Matcher matcher = STATIC_METHOD_REF_PATTERN.matcher(code);
+        StringBuffer result = new StringBuffer();
+
+        while (matcher.find()) {
+            String fullClassName = matcher.group(1); // "com.example.SchedulerImpl"
+            String methodName = matcher.group(2); // "execute"
+
+            // Extract simple class name from full package name
+            String className = fullClassName.substring(
+                fullClassName.lastIndexOf('.') + 1
+            );
+
+            // Transform to: ClassName.methodName (function reference, no parentheses)
+            String replacement = className + "." + methodName;
+            matcher.appendReplacement(
+                result,
+                Matcher.quoteReplacement(replacement)
+            );
+        }
+
+        matcher.appendTail(result);
+        return result.toString();
+    }
+
+    /**
      * Transform instance field access from JSNI to JavaScript.
      * this.@JSNIExample::myInstanceField → this.myInstanceField
      */
@@ -235,6 +273,7 @@ public class JSNIProcessor {
             CONSTRUCTOR_PATTERN.matcher(code).find() ||
             INSTANCE_METHOD_PATTERN.matcher(code).find() ||
             STATIC_METHOD_PATTERN.matcher(code).find() ||
+            STATIC_METHOD_REF_PATTERN.matcher(code).find() ||
             INSTANCE_FIELD_PATTERN.matcher(code).find() ||
             STATIC_FIELD_PATTERN.matcher(code).find()
         );

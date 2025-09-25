@@ -42,6 +42,7 @@ import source.structural.gwt.user.client.ui.AttachDetachException;
 import source.tscomparison.AbstractClasses;
 import source.tscomparison.ActualScoping;
 import source.tscomparison.CompileTimeWarnings;
+import source.tscomparison.HasVerticalAlignmentTest;
 import source.tscomparison.InnerAbstractClassTest;
 import source.tscomparison.OtherThisExample;
 import source.tscomparison.StaticMethodInClassTest;
@@ -401,6 +402,34 @@ public class TsComparisonTest extends AbstractTest {
                       tsContent.contains("static staticMethod"));
             assertTrue("Generated TypeScript should contain 'static anotherStaticMethod'",
                       tsContent.contains("static anotherStaticMethod"));
+
+        } catch (IOException e) {
+            fail("Could not read generated TypeScript file: " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void hasVerticalAlignmentTest() {
+        // Test static nested class in interface hoisting and field generation
+        SourceFile file = getSourceFile(HasVerticalAlignmentTest.class);
+        eval(ModuleKind.es2015, (logHandler, result) -> {
+            logHandler.assertNoProblems();
+        }, file);
+
+        try {
+            String tsContent = FileUtils.readFileToString(file.getTsFile());
+            System.out.println("Generated TypeScript content for HasVerticalAlignmentTest:");
+            System.out.println(tsContent);
+
+            // Check for the BUG: should NOT contain "let fieldName" in class fields
+            assertFalse("Generated TypeScript should not contain 'let verticalAlignString' in class field",
+                       tsContent.contains("let verticalAlignString"));
+
+            // Check for CORRECT behavior: should contain proper class field declaration
+            assertTrue("Generated TypeScript should contain proper class field 'verticalAlignString: string'",
+                      tsContent.contains("verticalAlignString: string") ||
+                      tsContent.contains("private verticalAlignString: string") ||
+                      tsContent.contains("/*private*/ verticalAlignString: string"));
 
         } catch (IOException e) {
             fail("Could not read generated TypeScript file: " + e.getMessage());
