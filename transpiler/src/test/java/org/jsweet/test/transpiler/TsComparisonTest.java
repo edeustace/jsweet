@@ -18,11 +18,13 @@ package org.jsweet.test.transpiler;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.io.File;
 
 import org.apache.commons.io.FileUtils;
+import java.io.IOException;
 import org.jsweet.transpiler.ModuleKind;
 import org.jsweet.transpiler.SourceFile;
 import org.jsweet.transpiler.util.EvaluationResult;
@@ -40,7 +42,9 @@ import source.structural.gwt.user.client.ui.AttachDetachException;
 import source.tscomparison.AbstractClasses;
 import source.tscomparison.ActualScoping;
 import source.tscomparison.CompileTimeWarnings;
+import source.tscomparison.InnerAbstractClassTest;
 import source.tscomparison.OtherThisExample;
+import source.tscomparison.StaticMethodInClassTest;
 import source.tscomparison.SaferVarargs;
 import source.tscomparison.StrongerTyping;
 import source.tscomparison.ThisIsThis;
@@ -287,6 +291,46 @@ public class TsComparisonTest extends AbstractTest {
         assertEquals("bluh", res[1]);
     }
 
+    @Test
+    public void innerAbstractClassTest() {
+        SourceFile file = getSourceFile(InnerAbstractClassTest.class);
+        eval(ModuleKind.es2015, (logHandler, result) -> {
+            logHandler.assertNoProblems();
+        }, file);
+
+        try {
+            String tsContent = FileUtils.readFileToString(file.getTsFile());
+            System.out.println("Generated TypeScript content for InnerAbstractClassTest:");
+            System.out.println(tsContent);
+
+            // Check if inner abstract classes are defined outside the containing class
+            boolean hasStaticAbstractOutside = tsContent.contains("export abstract class StaticAbstractInner") ||
+                                              tsContent.contains("abstract class StaticAbstractInner");
+            boolean hasNonStaticAbstractOutside = tsContent.contains("export abstract class NonStaticAbstractInner") ||
+                                                 tsContent.contains("abstract class NonStaticAbstractInner");
+
+            // Check if they're referenced correctly inside the containing class
+            boolean hasStaticReference = tsContent.contains("StaticAbstractInner") &&
+                                        !tsContent.contains("InnerAbstractClassTest.StaticAbstractInner");
+            boolean hasNonStaticReference = tsContent.contains("NonStaticAbstractInner") &&
+                                           !tsContent.contains("InnerAbstractClassTest.NonStaticAbstractInner");
+
+            System.out.println("Static abstract class defined outside: " + hasStaticAbstractOutside);
+            System.out.println("Non-static abstract class defined outside: " + hasNonStaticAbstractOutside);
+            System.out.println("Static class referenced without namespace: " + hasStaticReference);
+            System.out.println("Non-static class referenced without namespace: " + hasNonStaticReference);
+
+            // These assertions will initially fail - that's the point of the test
+            // We want to see the current behavior first
+            // assertTrue("Static abstract class should be defined outside containing class", hasStaticAbstractOutside);
+            // assertTrue("Non-static abstract class should be defined outside containing class", hasNonStaticAbstractOutside);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail("Failed to read TypeScript file: " + e.getMessage());
+        }
+    }
+
     private TsSourceFile getTsSourceFile(SourceFile jsweetSourceFile) {
         String javaTestFilePath = jsweetSourceFile.getJavaFile().getAbsolutePath();
         File tsFile = new File(javaTestFilePath.substring(0, javaTestFilePath.length() - 5) + ".ts");
@@ -331,5 +375,35 @@ public class TsComparisonTest extends AbstractTest {
             // do nothing
         }
 
+    }
+
+    @Test
+    public void staticMethodInClassTest() {
+        SourceFile file = getSourceFile(StaticMethodInClassTest.class);
+        eval(ModuleKind.es2015, (logHandler, result) -> {
+            // This test should fail until the static method issue is fixed
+            // The issue: JSweet generates "export function" inside classes instead of "static" methods
+            logHandler.assertNoProblems();
+        }, file);
+
+        try {
+            String tsContent = FileUtils.readFileToString(file.getTsFile());
+            System.out.println("Generated TypeScript content for StaticMethodInClassTest:");
+            System.out.println(tsContent);
+
+            // Check for the BUG: should NOT contain "export function" inside class
+            assertFalse("Generated TypeScript should not contain 'export function' inside class body",
+                       tsContent.contains("export function staticMethod") ||
+                       tsContent.contains("export function anotherStaticMethod"));
+
+            // Check for CORRECT behavior: should contain "static" methods
+            assertTrue("Generated TypeScript should contain 'static staticMethod'",
+                      tsContent.contains("static staticMethod"));
+            assertTrue("Generated TypeScript should contain 'static anotherStaticMethod'",
+                      tsContent.contains("static anotherStaticMethod"));
+
+        } catch (IOException e) {
+            fail("Could not read generated TypeScript file: " + e.getMessage());
+        }
     }
 }

@@ -1465,7 +1465,7 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                 if (typeElement instanceof TypeElement && context.useModules) {
                     ensureModuleIsUsed(typeElement);
                 }
-                return print(typeTree);
+                return printTypeTree(typeTree);
             }
         }
 
@@ -1953,8 +1953,14 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                         getScope().isStaticInnerClass = false;
                     }
                 } else {
-                    // non-static inner types are printed in a namespace (existing behavior)
-                    // skip for now, they will be handled in the namespace section
+                    // Check if this is an abstract class - abstract classes need to be hoisted
+                    if (innerClass.getModifiers().getFlags().contains(Modifier.ABSTRACT)) {
+                        // Non-static abstract inner classes are also collected for hoisting
+                        getScope().staticInnerAbstractClasses.add(innerClass);
+                    } else {
+                        // non-static non-abstract inner types are printed in a namespace (existing behavior)
+                        // skip for now, they will be handled in the namespace section
+                    }
                 }
                 continue;
             }
@@ -2347,42 +2353,52 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
             println().endIndent().printIndent().print("}").println();
         }
 
-        // Generate namespaces for static inner classes (both abstract and inside interfaces)
-        for (ClassTree staticClass : getScope().staticInnerAbstractClasses) {
-            TypeElement staticClassElement = Util.getTypeElement(staticClass);
-            String className = staticClassElement.getSimpleName().toString();
-            String parentClassName = classTypeElement.getSimpleName().toString();
-
+        // Hoist abstract inner classes outside the containing class
+        for (ClassTree abstractClass : getScope().staticInnerAbstractClasses) {
             println().println().printIndent();
+
             if (!isTopLevelScope() || context.useModules || context.moduleBundleMode) {
                 print("export ");
             }
-            print("namespace ").print(parentClassName).print(" {").startIndent();
 
-            // Generate the class declaration within the namespace (without DocComment)
-            println().printIndent();
-            printIndent().print("export ");
-
-            // Add abstract modifier only if the class is actually abstract
-            if (staticClass.getModifiers().getFlags().contains(Modifier.ABSTRACT)) {
+            // Add abstract modifier for abstract classes
+            if (abstractClass.getModifiers().getFlags().contains(Modifier.ABSTRACT)) {
                 print("abstract ");
             }
 
-            print("class ").print(className);
+            print("class ").print(abstractClass.getSimpleName().toString());
 
             // Handle extends clause if any
-            if (staticClass.getExtendsClause() != null) {
+            if (abstractClass.getExtendsClause() != null) {
                 print(" extends ");
-                print(staticClass.getExtendsClause());
+                print(abstractClass.getExtendsClause());
+            }
+
+            // Handle implements clause if any
+            if (abstractClass.getImplementsClause() != null && !abstractClass.getImplementsClause().isEmpty()) {
+                print(" implements ");
+                boolean first = true;
+                for (Tree implementedInterface : abstractClass.getImplementsClause()) {
+                    if (!first) {
+                        print(", ");
+                    }
+                    print(implementedInterface);
+                    first = false;
+                }
             }
 
             print(" {").startIndent();
 
-            // For now, just generate an empty class body
-            // TODO: Implement full member generation if needed
-            println().printIndent().print("// Members would be generated here");
-
-            println().endIndent().printIndent().print("}");
+            // Generate the actual class members by visiting the class tree
+            for (Tree member : abstractClass.getMembers()) {
+                if (member instanceof MethodTree) {
+                    println().printIndent();
+                    print(member);
+                } else if (member instanceof VariableTree) {
+                    println().printIndent();
+                    print(member);
+                }
+            }
 
             println().endIndent().printIndent().print("}").println();
         }
@@ -4211,6 +4227,45 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
         return false;
     }
 
+    /**
+     * Check if a member select tree represents a reference to a hoisted abstract inner class.
+     */
+    private boolean isHoistedAbstractClassReference(MemberSelectTree memberSelectTree) {
+        Element memberElement = Util.getElement(memberSelectTree);
+        Element selectedTypeElement = Util.getTypeElement(memberSelectTree.getExpression());
+
+        if (memberElement instanceof TypeElement) {
+            TypeElement memberClass = (TypeElement) memberElement;
+            // Check if this type element is an abstract inner class that would have been hoisted
+            if (memberClass.getEnclosingElement() instanceof TypeElement &&
+                memberClass.getModifiers().contains(Modifier.ABSTRACT)) {
+                // This is an abstract inner class - it should have been hoisted
+                // Check if it's being accessed via its enclosing class (e.g., OuterClass.InnerAbstract)
+                if (selectedTypeElement != null && selectedTypeElement.equals(memberClass.getEnclosingElement())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Print a type tree, handling hoisted abstract class references.
+     */
+    private AbstractTreePrinter printTypeTree(Tree typeTree) {
+        if (typeTree instanceof MemberSelectTree) {
+            MemberSelectTree memberSelectTree = (MemberSelectTree) typeTree;
+            if (isHoistedAbstractClassReference(memberSelectTree)) {
+                // For hoisted abstract classes, print only the class name without the qualifier
+                System.out.println("DEBUG PRINT TYPE: Fixing hoisted abstract class reference: " + typeTree);
+                return print(memberSelectTree.getIdentifier().toString());
+            }
+        }
+
+
+        return print(typeTree);
+    }
+
     @Override
     public Void visitMemberSelect(MemberSelectTree memberSelectTree, Trees trees) {
         if (!getAdapter().substitute(createExtendedElement(memberSelectTree))) {
@@ -4319,7 +4374,12 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                         }
 
                         if (!accessSubstituted) {
-                            print(memberSelectTree.getExpression()).print(".");
+                            if (isHoistedAbstractClassReference(memberSelectTree)) {
+                                // For hoisted abstract classes, use direct reference instead of qualified name
+                                // Don't print the expression part, just the class name
+                            } else {
+                                print(memberSelectTree.getExpression()).print(".");
+                            }
                         }
                     }
                 }
@@ -5000,9 +5060,13 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                         prefixAdded = true;
                     }
                 }
+                // Check if this is a hoisted abstract inner class - if so, don't add prefix
+                boolean isHoistedAbstract = classIdentifierTypeElement.getEnclosingElement() instanceof TypeElement
+                    && classIdentifierTypeElement.getModifiers().contains(Modifier.ABSTRACT);
+
                 // add parent class name if ident is an inner class of the
-                // current class
-                if (!prefixAdded && classIdentifierTypeElement.getEnclosingElement() instanceof TypeElement) {
+                // current class (but not if it's a hoisted abstract class)
+                if (!prefixAdded && !isHoistedAbstract && classIdentifierTypeElement.getEnclosingElement() instanceof TypeElement) {
                     if (context.useModules) {
                         String enclosingName = classIdentifierTypeElement.getEnclosingElement().getSimpleName().toString();
                         if (context.hasClassNameMapping((TypeElement)classIdentifierTypeElement.getEnclosingElement())) {
