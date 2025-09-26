@@ -178,6 +178,11 @@ public class SnapshotTest extends AbstractTest {
                 }
                 break;
             // candiesJsOut option removed as it doesn't exist in current JSweet version
+            case "hoistAbstractStaticInnerClasses":
+                if (value instanceof Boolean) {
+                    transpiler.setHoistAbstractStaticInnerClasses((Boolean) value);
+                }
+                break;
             default:
                 System.err.println("Unknown option: " + key);
         }
@@ -281,21 +286,39 @@ public class SnapshotTest extends AbstractTest {
     }
 
     @Test
-    public void testStackTraceCreator() {
+    public void testStackTraceCreatorWithHoisting() {
         Map<String, Object> options = new HashMap<>();
         options.put("target", "ES6");  // Latest available ES target in JSweet
+        options.put("hoistAbstractStaticInnerClasses", true); // Enable hoisting
 
         Path snapshotPath = runSnapshotTest(
-                "StackTraceCreator",
+                "StackTraceCreator_hoisted",
                 StackTraceCreator.class,
                 options,
-                false,  // Run TypeScript evaluation
+                false,  // Don't run TypeScript evaluation
                 ModuleKind.es2015
         );
 
         assertTrue("Snapshot should be created", Files.exists(snapshotPath));
         System.out.println("Snapshot created at: " + snapshotPath);
+    }
 
+    @Test
+    public void testStackTraceCreatorWithoutHoisting() {
+        Map<String, Object> options = new HashMap<>();
+        options.put("target", "ES6");  // Latest available ES target in JSweet
+        // hoistAbstractStaticInnerClasses defaults to false
+
+        Path snapshotPath = runSnapshotTest(
+                "StackTraceCreator_namespaced",
+                StackTraceCreator.class,
+                options,
+                false,  // Don't run TypeScript evaluation
+                ModuleKind.es2015
+        );
+
+        assertTrue("Snapshot should be created", Files.exists(snapshotPath));
+        System.out.println("Snapshot created at: " + snapshotPath);
     }
     // Test with latest available ES syntax (ES6)
     @Test

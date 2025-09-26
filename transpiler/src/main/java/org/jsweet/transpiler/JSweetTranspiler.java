@@ -397,6 +397,9 @@ public class JSweetTranspiler implements JSweetOptions, AutoCloseable {
                     setHangingTscTimeout(Integer.parseInt(s));
                 }
             }
+            if (options.containsKey(JSweetOptions.hoistAbstractStaticInnerClasses)) {
+                setHoistAbstractStaticInnerClasses((Boolean) getMapValue(options, JSweetOptions.hoistAbstractStaticInnerClasses));
+            }
         }
 
     }
@@ -1956,6 +1959,15 @@ public class JSweetTranspiler implements JSweetOptions, AutoCloseable {
 
     public void setAutoPropagateAsyncAwaits(boolean autoPropagateAsyncAwaits) {
         this.autoPropagateAsyncAwaits = autoPropagateAsyncAwaits;
+    }
+
+    @Override
+    public boolean isHoistAbstractStaticInnerClasses() {
+        return this.hoistAbstractStaticInnerClasses;
+    }
+
+    public void setHoistAbstractStaticInnerClasses(boolean hoistAbstractStaticInnerClasses) {
+        this.hoistAbstractStaticInnerClasses = hoistAbstractStaticInnerClasses;
     }
 
     @Override
