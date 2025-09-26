@@ -161,6 +161,9 @@ public class CompilerService {
 
             // Configure for ES6 modules (ESM) instead of namespaces
             transpiler.setModuleKind(org.jsweet.transpiler.ModuleKind.es2015);
+            
+            // Enable hoisting of abstract static inner classes by default in CLI
+            transpiler.setHoistAbstractStaticInnerClasses(true);
 
             // Create SourceFile for JSweet
             File inputFile = new File(sourceFile.getFilePath());
@@ -403,6 +406,9 @@ public class CompilerService {
 
             // Configure for ES6 modules (ESM) instead of namespaces
             transpiler.setModuleKind(org.jsweet.transpiler.ModuleKind.es2015);
+            
+            // Enable hoisting of abstract static inner classes by default in CLI
+            transpiler.setHoistAbstractStaticInnerClasses(true);
 
             if (verbose) {
                 System.out.println(

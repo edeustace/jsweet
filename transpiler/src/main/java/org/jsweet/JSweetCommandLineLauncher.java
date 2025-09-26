@@ -625,6 +625,15 @@ public class JSweetCommandLineLauncher {
                 "and automatically adds await keywords when invoking async methods.");
         jsap.registerParameter(switchArg);
         
+        // Hoist abstract static inner classes
+        switchArg = new Switch(JSweetOptions.hoistAbstractStaticInnerClasses);
+        switchArg.setLongFlag(JSweetOptions.hoistAbstractStaticInnerClasses);
+        switchArg.setDefault("true");  // Default to true in CLI
+        switchArg.setHelp(
+                "Hoist abstract static inner classes outside their enclosing class to avoid "+
+                "TypeScript forward reference issues. This is enabled by default in the CLI.");
+        jsap.registerParameter(switchArg);
+        
         // Extra Java Compiler Options
         optionArg = new FlaggedOption(JSweetOptions.javaCompilerExtraOptions);
         optionArg.setLongFlag(JSweetOptions.javaCompilerExtraOptions);
@@ -872,7 +881,10 @@ public class JSweetCommandLineLauncher {
                     }
                     if (jsapArgs.userSpecified(JSweetOptions.autoPropagateAsyncAwaits)) {
                         transpiler.setAutoPropagateAsyncAwaits(jsapArgs.getBoolean(JSweetOptions.autoPropagateAsyncAwaits));
-                    }    
+                    }
+                    
+                    // Set hoisting option (defaults to true in CLI)
+                    transpiler.setHoistAbstractStaticInnerClasses(jsapArgs.getBoolean(JSweetOptions.hoistAbstractStaticInnerClasses));
                     
                     if (jsapArgs.userSpecified(JSweetOptions.javaCompilerExtraOptions)) {
                         transpiler.setJavaCompilerExtraOptions(jsapArgs.getStringArray(JSweetOptions.javaCompilerExtraOptions));

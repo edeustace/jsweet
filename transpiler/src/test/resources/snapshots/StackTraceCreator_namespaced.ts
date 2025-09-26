@@ -1,15 +1,8 @@
 /* Generated from Java with JSweet 5.0.0-SNAPSHOT - http://www.jsweet.org */
-
-export abstract class Collector {
-    constructor() {
-    }
-    /*private*/ name: string = "name"
-    public abstract collect(error: any);
-}
 export class StackTraceCreator {
 
 
-    public static CollectorLegacy = class CollectorLegacy extends Collector {
+    public static CollectorLegacy = class CollectorLegacy extends StackTraceCreator.Collector {
         public foo: string;
 
         /**
@@ -27,6 +20,13 @@ export class StackTraceCreator {
     }
 }
 StackTraceCreator["__class"] = "source.structural.StackTraceCreator";
+
+
+export namespace StackTraceCreator {
+        export abstract class Collector {
+        // Members would be generated here
+    }
+}
 
 
 

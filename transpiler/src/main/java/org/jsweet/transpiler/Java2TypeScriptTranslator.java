@@ -327,6 +327,7 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
 
         private List<ClassTree> staticInnerInterfaces = new ArrayList<>();
         private List<ClassTree> staticInnerAbstractClasses = new ArrayList<>();
+        private List<ClassTree> hoistedClasses = new ArrayList<>();
 
         private List<LinkedHashSet<VariableElement>> finalVariables = new ArrayList<>();
 
@@ -1586,6 +1587,80 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
             }
         }
 
+        // If hoisting is enabled, collect and generate hoisted classes BEFORE the main class
+        List<ClassTree> classesToHoist = new ArrayList<>();
+        if (context.options.isHoistAbstractStaticInnerClasses() && !getScope().innerClass) {
+            // Scan members to find abstract classes that need hoisting
+            for (Tree def : classTree.getMembers()) {
+                if (def instanceof ClassTree) {
+                    ClassTree innerClass = (ClassTree) def;
+                    boolean shouldHoist = false;
+                    
+                    // Check if this should be hoisted
+                    if (innerClass.getModifiers().getFlags().contains(Modifier.STATIC) &&
+                        innerClass.getModifiers().getFlags().contains(Modifier.ABSTRACT)) {
+                        // Static abstract inner classes
+                        shouldHoist = true;
+                    } else if (!innerClass.getModifiers().getFlags().contains(Modifier.STATIC) &&
+                               innerClass.getModifiers().getFlags().contains(Modifier.ABSTRACT)) {
+                        // Non-static abstract inner classes (when hoisting is enabled)
+                        shouldHoist = true;
+                    }
+                    
+                    if (shouldHoist) {
+                        classesToHoist.add(innerClass);
+                        getScope().hoistedClasses.add(innerClass);  // Track hoisted classes in scope
+                    }
+                }
+            }
+            
+            // Generate hoisted classes before the main class
+            for (ClassTree hoistedClass : classesToHoist) {
+                println();
+                if (!isTopLevelScope() || context.useModules || context.moduleBundleMode) {
+                    print("export ");
+                }
+                
+                // Add abstract modifier for abstract classes
+                if (hoistedClass.getModifiers().getFlags().contains(Modifier.ABSTRACT)) {
+                    print("abstract ");
+                }
+                
+                print("class ").print(hoistedClass.getSimpleName().toString());
+                
+                // Handle extends clause if any
+                if (hoistedClass.getExtendsClause() != null) {
+                    print(" extends ");
+                    print(hoistedClass.getExtendsClause());
+                }
+                
+                // Handle implements clause if any
+                if (hoistedClass.getImplementsClause() != null && !hoistedClass.getImplementsClause().isEmpty()) {
+                    print(" implements ");
+                    boolean first = true;
+                    for (Tree implementedInterface : hoistedClass.getImplementsClause()) {
+                        if (!first) {
+                            print(", ");
+                        }
+                        print(implementedInterface);
+                        first = false;
+                    }
+                }
+                
+                print(" {").startIndent();
+                
+                // Generate the actual class members by visiting the class tree
+                for (Tree member : hoistedClass.getMembers()) {
+                    if (member instanceof MethodTree || member instanceof VariableTree) {
+                        println().printIndent();
+                        print(member);
+                    }
+                }
+                
+                println().endIndent().printIndent().print("}").println();
+            }
+        }
+
         HashSet<DefaultMethodEntry> defaultMethods = null;
         boolean globals = JSweetConfig.GLOBALS_CLASS_NAME.equals(classTree.getSimpleName().toString());
         if (globals && classTree.getExtendsClause() != null) {
@@ -1939,11 +2014,18 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                     continue;
                 }
 
+                // Skip if this class was already hoisted
+                if (getScope().hoistedClasses.contains(innerClass)) {
+                    continue;
+                }
+                
                 if (innerClass.getModifiers().getFlags().contains(Modifier.STATIC)) {
                     // Check if this is an abstract class - abstract classes cannot be class expressions
                     if (innerClass.getModifiers().getFlags().contains(Modifier.ABSTRACT)) {
-                        // Abstract static inner classes are collected for hoisting or namespace generation later
-                        getScope().staticInnerAbstractClasses.add(innerClass);
+                        // Abstract static inner classes are collected for namespace generation later (if not hoisted)
+                        if (!context.options.isHoistAbstractStaticInnerClasses()) {
+                            getScope().staticInnerAbstractClasses.add(innerClass);
+                        }
                     } else if (getScope().interfaceScope) {
                         // Static classes inside interfaces cannot be class expressions in TypeScript
                         // They are collected for namespace generation later
@@ -1958,15 +2040,9 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                     }
                 } else {
                     // non-static inner types handling
-                    // When hoisting is enabled, check if this is an abstract class that should be hoisted
-                    if (context.options.isHoistAbstractStaticInnerClasses() && 
-                        innerClass.getModifiers().getFlags().contains(Modifier.ABSTRACT)) {
-                        // Non-static abstract inner classes are also collected for hoisting
-                        getScope().staticInnerAbstractClasses.add(innerClass);
-                    } else {
-                        // non-hoisted inner types are printed in a namespace (existing behavior)
-                        // skip for now, they will be handled in the namespace section
-                    }
+                    // non-static inner types are printed in a namespace (existing behavior)
+                    // skip for now, they will be handled in the namespace section
+                    // (hoisted classes have already been handled above)
                 }
                 continue;
             }
@@ -2359,58 +2435,8 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
             println().endIndent().printIndent().print("}").println();
         }
 
-        // Handle abstract inner classes - either hoist them or put them in namespaces
-        if (context.options.isHoistAbstractStaticInnerClasses()) {
-            // Hoist abstract inner classes outside the containing class
-            for (ClassTree abstractClass : getScope().staticInnerAbstractClasses) {
-                println().println().printIndent();
-                
-                if (!isTopLevelScope() || context.useModules || context.moduleBundleMode) {
-                    print("export ");
-                }
-                
-                // Add abstract modifier for abstract classes
-                if (abstractClass.getModifiers().getFlags().contains(Modifier.ABSTRACT)) {
-                    print("abstract ");
-                }
-                
-                print("class ").print(abstractClass.getSimpleName().toString());
-                
-                // Handle extends clause if any
-                if (abstractClass.getExtendsClause() != null) {
-                    print(" extends ");
-                    print(abstractClass.getExtendsClause());
-                }
-                
-                // Handle implements clause if any
-                if (abstractClass.getImplementsClause() != null && !abstractClass.getImplementsClause().isEmpty()) {
-                    print(" implements ");
-                    boolean first = true;
-                    for (Tree implementedInterface : abstractClass.getImplementsClause()) {
-                        if (!first) {
-                            print(", ");
-                        }
-                        print(implementedInterface);
-                        first = false;
-                    }
-                }
-                
-                print(" {").startIndent();
-                
-                // Generate the actual class members by visiting the class tree
-                for (Tree member : abstractClass.getMembers()) {
-                    if (member instanceof MethodTree) {
-                        println().printIndent();
-                        print(member);
-                    } else if (member instanceof VariableTree) {
-                        println().printIndent();
-                        print(member);
-                    }
-                }
-                
-                println().endIndent().printIndent().print("}").println();
-            }
-        } else {
+        // Handle abstract inner classes that were not hoisted - put them in namespaces
+        if (!context.options.isHoistAbstractStaticInnerClasses()) {
             // Current behavior - Generate namespaces for static inner classes (both abstract and inside interfaces)
             for (ClassTree staticClass : getScope().staticInnerAbstractClasses) {
                 TypeElement staticClassElement = Util.getTypeElement(staticClass);
