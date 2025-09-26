@@ -156,6 +156,11 @@ public interface JSweetOptions {
      * Constant string for the 'autoPropagateAsyncs' option.
      */
     String autoPropagateAsyncAwaits = "autoPropagateAsyncAwaits";
+    
+    /**
+     * Constant string for the 'hoistAbstractStaticInnerClasses' option.
+     */
+    String hoistAbstractStaticInnerClasses = "hoistAbstractStaticInnerClasses";
 
     /**
      * All the supported options. (used to report non-blocking errors when options
@@ -165,7 +170,7 @@ public interface JSweetOptions {
             declaration, tsOnly, ignoreDefinitions, ignoreJavaErrors, header, disableSinglePrecisionFloats,
             disableStaticsLazyInitialization, targetVersion, tsout, dtsout, jsout, candiesJsOut, moduleResolution,
             extraSystemPath, useSingleQuotesForStringLiterals, nonEnumerableTransients, hangingTscTimeout, classpath, sortClassMembers,
-            autoPropagateAsyncAwaits };
+            autoPropagateAsyncAwaits, hoistAbstractStaticInnerClasses };
 
     /**
      * Returns the configuration from the configuration file.
@@ -400,6 +405,12 @@ public interface JSweetOptions {
      * If true, auto propagates async methods and await invocations.
      */
     boolean isAutoPropagateAsyncAwaits();
+
+    /**
+     * If true, abstract static inner classes should be hoisted outside their
+     * enclosing class to avoid TypeScript namespace-class merging issues.
+     */
+    boolean isHoistAbstractStaticInnerClasses();
 
     /**
      * Gets additional options passed to the Java Compiler.

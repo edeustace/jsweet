@@ -228,6 +228,7 @@ public class JSweetTranspiler implements JSweetOptions, AutoCloseable {
     private boolean sortClassMembers = false;
 
     private boolean autoPropagateAsyncAwaits = false;
+    private boolean hoistAbstractStaticInnerClasses = false;
     private String[] javaCompilerExtraOptions = {};
 
     private ArrayList<String> adapters = new ArrayList<>();
