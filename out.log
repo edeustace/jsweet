@@ -20,7 +20,7 @@ Detected directory - using multi-file compilation
   symbol:   class ConsoleLogger
   location: package javaemul.internal
   at /Users/ed.eustace/dev/github.com/ed-eustace/jsweet/gwt-to-ts-test/gwt-2.11.0/user/src/com/google/gwt/core/client/impl/SuperDevModeLogger.java(20,25)
-2025-09-26 09:45:17.017 ERROR JSweetTranspiler:99 - /Users/ed.eustace/dev/github.com/ed-eustace/jsweet/gwt-to-ts-test/gwt-2.11.0/user/src/com/google/gwt/core/client/impl/SuperDevModeLogger.java:20: error: cannot find symbol
+2025-09-27 21:54:05.005 ERROR JSweetTranspiler:99 - /Users/ed.eustace/dev/github.com/ed-eustace/jsweet/gwt-to-ts-test/gwt-2.11.0/user/src/com/google/gwt/core/client/impl/SuperDevModeLogger.java:20: error: cannot find symbol
 import javaemul.internal.ConsoleLogger;
                         ^
   symbol:   class ConsoleLogger
@@ -29,7 +29,7 @@ import javaemul.internal.ConsoleLogger;
   symbol:   class ConsoleLogger
   location: class com.google.gwt.core.client.impl.SuperDevModeLogger
   at /Users/ed.eustace/dev/github.com/ed-eustace/jsweet/gwt-to-ts-test/gwt-2.11.0/user/src/com/google/gwt/core/client/impl/SuperDevModeLogger.java(29,5)
-2025-09-26 09:45:18.018 ERROR JSweetTranspiler:99 - /Users/ed.eustace/dev/github.com/ed-eustace/jsweet/gwt-to-ts-test/gwt-2.11.0/user/src/com/google/gwt/core/client/impl/SuperDevModeLogger.java:29: error: cannot find symbol
+2025-09-27 21:54:05.005 ERROR JSweetTranspiler:99 - /Users/ed.eustace/dev/github.com/ed-eustace/jsweet/gwt-to-ts-test/gwt-2.11.0/user/src/com/google/gwt/core/client/impl/SuperDevModeLogger.java:29: error: cannot find symbol
     ConsoleLogger console = ConsoleLogger.createIfSupported();
     ^
   symbol:   class ConsoleLogger
@@ -38,7 +38,7 @@ import javaemul.internal.ConsoleLogger;
   symbol:   variable ConsoleLogger
   location: class com.google.gwt.core.client.impl.SuperDevModeLogger
   at /Users/ed.eustace/dev/github.com/ed-eustace/jsweet/gwt-to-ts-test/gwt-2.11.0/user/src/com/google/gwt/core/client/impl/SuperDevModeLogger.java(29,29)
-2025-09-26 09:45:18.018 ERROR JSweetTranspiler:99 - /Users/ed.eustace/dev/github.com/ed-eustace/jsweet/gwt-to-ts-test/gwt-2.11.0/user/src/com/google/gwt/core/client/impl/SuperDevModeLogger.java:29: error: cannot find symbol
+2025-09-27 21:54:05.005 ERROR JSweetTranspiler:99 - /Users/ed.eustace/dev/github.com/ed-eustace/jsweet/gwt-to-ts-test/gwt-2.11.0/user/src/com/google/gwt/core/client/impl/SuperDevModeLogger.java:29: error: cannot find symbol
     ConsoleLogger console = ConsoleLogger.createIfSupported();
                             ^
   symbol:   variable ConsoleLogger
@@ -1144,6 +1144,8 @@ JSNI DETECTED: shouldTreeDelegateFocusToElement in class Tree
 JSNI CONVERTED: shouldTreeDelegateFocusToElement with JSNI body
 🔍 JSNIAdapter: Processing JSNI comment blocks for compilation unit
 ✅ JSNIAdapter: Processed JSNI methods
+[ERROR] field 'isAttached' has the same name as a method in 'com.google.gwt.user.client.ui.Widget'
+  at /Users/ed.eustace/dev/github.com/ed-eustace/jsweet/gwt-to-ts-test/gwt-2.11.0/user/src/com/google/gwt/user/client/ui/ResizeLayoutPanel.java(61,5)
 🔄 JSNIAdapter: Found native method, letting transpiler handle conversion: initResizeEventListener
 JSNI DETECTED: initResizeEventListener in class ImplTrident
 JSNI CONVERTED: initResizeEventListener with JSNI body
@@ -4802,5 +4804,5 @@ JSNI DETECTED: isSupportedRunTime in class VideoElementSupportDetector
 JSNI CONVERTED: isSupportedRunTime with JSNI body
 🔍 JSNIAdapter: Processing JSNI comment blocks for compilation unit
 ✅ JSNIAdapter: Processed JSNI methods
-⚠️  Multi-file compilation completed with 60 warnings (output generated successfully)
+⚠️  Multi-file compilation completed with 61 warnings (output generated successfully)
 Compilation completed successfully!

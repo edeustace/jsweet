@@ -29,12 +29,12 @@ import org.jsweet.transpiler.model.MethodInvocationElement;
 
 /**
  * This adapter replaces GWT.create() calls with direct instantiation of implementation classes.
- *
+ * <p>
  * This is because in GWT, GWT.create() is populated by the compiler.
  * For example:
  * - GWT.create(Foo.class) becomes new FooImpl()
  * - GWT.create(Bar.class) becomes new Bar() (fallback to simple class name)
- *
+ * <p>
  * The mapping from interface to implementation is configurable via the typeMapping.
  * If no mapping is found, it falls back to using the simple class name.
  *
@@ -58,20 +58,37 @@ public class GWTCreateAdapter extends PrinterAdapter {
      * Adds a mapping from interface/class to implementation class.
      *
      * @param sourceType the fully qualified name of the interface/class used in GWT.create()
-     * @param implType the fully qualified name of the implementation class to instantiate
+     * @param implType   the fully qualified name of the implementation class to instantiate
      */
     public void addGWTTypeMapping(String sourceType, String implType) {
         typeMapping.put(sourceType, implType);
     }
 
+    private boolean isGwt(MethodInvocationElement invocation) {
+        if (invocation.getTargetExpression() == null) {
+            return false;
+        }
+        Element targetType = invocation.getTargetExpression().getTypeAsElement();
+        return (targetType != null && targetType.toString().endsWith("GWT"));
+    }
+
     @Override
     public boolean substituteMethodInvocation(MethodInvocationElement invocation) {
-        // Check if this is a GWT.create() call
-        if ("create".equals(invocation.getMethodName()) &&
-            invocation.getTargetExpression() != null) {
 
-            Element targetType = invocation.getTargetExpression().getTypeAsElement();
-            if (targetType != null && targetType.toString().endsWith("GWT")) {
+        if (isGwt(invocation)) {
+            System.out.println("GWT method call: " + invocation);
+            if ("isClient".equals(invocation.getMethodName())) {
+                printMacroName("isClient");
+                print("true");
+                return true;
+                // Check if this is a GWT.create() call
+            } else if("isScript".equals(invocation.getMethodName())) {
+                printMacroName("GWT.isScript");
+                print("true");
+                return true;
+            } else if ("create".equals(invocation.getMethodName()) &&
+                    invocation.getTargetExpression() != null) {
+
 
                 // Get the first argument (should be the class literal)
                 if (invocation.getArgumentCount() > 0) {
@@ -99,8 +116,8 @@ public class GWTCreateAdapter extends PrinterAdapter {
                         } else {
                             // Fallback: use simple name of the original class literal
                             classNameToUse = typeName.contains(".") ?
-                                typeName.substring(typeName.lastIndexOf('.') + 1) :
-                                typeName;
+                                    typeName.substring(typeName.lastIndexOf('.') + 1) :
+                                    typeName;
                         }
 
                         // Replace GWT.create(Foo.class) with new ClassName()
@@ -110,8 +127,9 @@ public class GWTCreateAdapter extends PrinterAdapter {
                     }
                 }
             }
-        }
 
+
+        }
         return super.substituteMethodInvocation(invocation);
     }
 }

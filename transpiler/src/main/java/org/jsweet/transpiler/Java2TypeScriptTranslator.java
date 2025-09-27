@@ -2790,7 +2790,7 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
         // PROTOTYPE: Store JSNI method detection for later use
         boolean isJsniMethod = methodTree.getModifiers().getFlags().contains(Modifier.NATIVE) && detectJsniMethod(methodTree);
         if (isJsniMethod) {
-            System.out.println("JSNI DETECTED: " + methodTree.getName() + " in class " + parent.getSimpleName());
+            logger.debug("JSNI DETECTED: " + methodTree.getName() + " in class " + parent.getSimpleName());
         }
 
         // Print modifiers normally - will be handled by JSweet's standard modifier printing logic
@@ -2974,7 +2974,7 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                     print("// JSNI method body not found");
                 }
                 println().endIndent().printIndent().print("}");
-                System.out.println("JSNI CONVERTED: " + methodName + " with JSNI body");
+                logger.debug("JSNI CONVERTED: " + methodName + " with JSNI body");
                 return returnNothing(); // Don't process further - JSNI method is complete
             } else if (!getScope().interfaceScope && methodTree.getModifiers().getFlags().contains(Modifier.ABSTRACT)
                     && inOverload && !overload.isValid) {
@@ -7380,26 +7380,60 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
      */
     private boolean detectJsniMethod(MethodTree methodTree) {
         try {
-            // Get the source lines
-            String[] sourceLines = getGetSource(compilationUnit);
-
-            // We need to find the line where this method ends (after the semicolon)
-            // This is a simplified approach - in production we'd use proper source positions
+            // Read the source file
+            String sourceContent = compilationUnit.getSourceFile().getCharContent(false).toString();
             String methodName = methodTree.getName().toString();
-
-            // Look for JSNI pattern in the source
-            for (String line : sourceLines) {
-                if (line.contains(methodName) && line.contains("native") &&
-                    (line.contains("/*-{") || line.contains("}-*/"))) {
-                    return true;
-                }
-            }
-            return false;
+            return detectJsniMethodInSource(sourceContent, methodName);
         } catch (Exception e) {
             // If anything fails, assume not JSNI
             System.out.println("Error detecting JSNI for " + methodTree.getName() + ": " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
+    }
+    
+    /**
+     * Static method for testing JSNI detection.
+     * @param sourceContent The source code content
+     * @param methodName The name of the method to check
+     * @return true if the method is a JSNI method
+     */
+    public static boolean detectJsniMethodInSource(String sourceContent, String methodName) {
+        String[] sourceLines = sourceContent.split("\n");
+        
+        // Simple approach: look for method name and JSNI marker within reasonable distance
+        for (int i = 0; i < sourceLines.length; i++) {
+            String line = sourceLines[i];
+            
+            // If this line contains the method name, look around for JSNI
+            if (line.contains(methodName)) {
+                // Look backwards up to 5 lines for 'native' keyword
+                boolean hasNative = false;
+                for (int k = Math.max(0, i - 5); k <= i; k++) {
+                    if (sourceLines[k].contains(" native ") || sourceLines[k].contains("\tnative ")) {
+                        hasNative = true;
+                        break;
+                    }
+                }
+                
+                // If native was found, look forward for JSNI marker
+                if (hasNative) {
+                    for (int j = i; j < Math.min(i + 10, sourceLines.length); j++) {
+                        if (sourceLines[j].contains("/*-{")) {
+                            return true;
+                        }
+                        // Stop if we hit another method or class
+                        if (j > i && (sourceLines[j].contains(" class ") || 
+                                     sourceLines[j].contains(" interface ") ||
+                                     (sourceLines[j].contains(" native ") && !sourceLines[j].contains(methodName)))) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return false;
     }
 
     /**
@@ -7419,16 +7453,20 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
      */
     private String extractJsniBody(MethodTree methodTree) {
         try {
-            String[] sourceLines = getGetSource(compilationUnit);
+            String sourceContent = compilationUnit.getSourceFile().getCharContent(false).toString();
+            String[] sourceLines = sourceContent.split("\n");
             String methodName = methodTree.getName().toString();
             boolean foundMethod = false;
             StringBuilder jsniBody = new StringBuilder();
             boolean insideJsni = false;
 
             for (String line : sourceLines) {
-                if (line.contains(methodName) && line.contains("native")) {
+                // Check if this line contains the method name (method might span multiple lines)
+                if (line.contains(methodName)) {
                     foundMethod = true;
                 }
+                
+                // Once we've found the method, look for JSNI start marker
                 if (foundMethod && line.contains("/*-{")) {
                     insideJsni = true;
                     int start = line.indexOf("/*-{") + 4;
@@ -7438,6 +7476,8 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                     }
                     continue;
                 }
+                
+                // Extract JSNI body content
                 if (insideJsni) {
                     if (line.contains("}-*/")) {
                         int end = line.indexOf("}-*/");

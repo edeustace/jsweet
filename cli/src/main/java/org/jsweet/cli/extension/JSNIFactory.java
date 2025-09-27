@@ -37,12 +37,16 @@ public class JSNIFactory extends JSweetFactory {
         System.out.println("   Chaining EmptyRegisterEntryAdapter");
         EmptyRegisterEntryAdapter emptyRegisterEntryAdapter = new EmptyRegisterEntryAdapter(baseAdapter);
 
+        // Chain GWTCreateAdapter
+        System.out.println("   Chaining GWTCreateAdapter on top of EmptyRegisterEntryAdapter");
+        GWTCreateAdapter gwtAdapter = new GWTCreateAdapter(emptyRegisterEntryAdapter);
+        
         // Chain our JSNI adapter on top with source root path
-        System.out.println("   Chaining JSNIAdapter on top of EmptyRegisterEntryAdapter");
-        JSNIAdapter jsniAdapter = new JSNIAdapter(emptyRegisterEntryAdapter, sourceRootPath);
+        System.out.println("   Chaining JSNIAdapter on top of GWTCreateAdapter");
+        JSNIAdapter jsniAdapter = new JSNIAdapter(gwtAdapter, sourceRootPath);
 
         System.out.println(
-            "✅ JSNIFactory: Adapter chain complete - JSNI support and EmptyRegisterEntry enabled"
+            "✅ JSNIFactory: Adapter chain complete - JSNI support, GWT.isClient/create, and EmptyRegisterEntry enabled"
         );
         return jsniAdapter;
     }

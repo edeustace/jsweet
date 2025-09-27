@@ -1,3 +1,7 @@
+// Import GWT globals first - MUST be before any GWT imports
+import "./gwt-globals";
+
+// Now safe to import GWT modules
 export const FOO = "bar";
 export type { EntryPoint } from "./com/google/gwt/core/client/EntryPoint";
 export { ClickEvent } from "./com/google/gwt/event/dom/client/ClickEvent";

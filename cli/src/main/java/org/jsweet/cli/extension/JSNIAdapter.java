@@ -28,14 +28,14 @@ public class JSNIAdapter extends PrinterAdapter {
     public JSNIAdapter(PrinterAdapter parentAdapter, String sourceRootPath) {
         super(parentAdapter);
         this.jsniProcessor = new JSNIProcessor();
-        System.out.println("🔧 JSNIAdapter: Initialized for JSNI post-processing");
+        logger.debug("🔧 JSNIAdapter: Initialized for JSNI post-processing");
     }
 
     @Override
     public boolean substituteMethodBody(TypeElement parentTypeElement, ExecutableElement method) {
         // Let the transpiler handle JSNI method conversion at AST level
         if (method.getModifiers().contains(Modifier.NATIVE)) {
-            System.out.println("🔄 JSNIAdapter: Found native method, letting transpiler handle conversion: " + method.getSimpleName());
+            logger.debug("🔄 JSNIAdapter: Found native method, letting transpiler handle conversion: " + method.getSimpleName());
         }
         return super.substituteMethodBody(parentTypeElement, method);
     }
@@ -44,7 +44,7 @@ public class JSNIAdapter extends PrinterAdapter {
     public boolean substituteExecutable(ExecutableElement executable) {
         // Let the transpiler handle JSNI method conversion at AST level
         if (executable.getModifiers().contains(Modifier.NATIVE)) {
-            System.out.println("🔄 JSNIAdapter: Found native method, letting transpiler handle conversion: " + executable.getSimpleName());
+            logger.debug("🔄 JSNIAdapter: Found native method, letting transpiler handle conversion: " + executable.getSimpleName());
         }
         return super.substituteExecutable(executable);
     }
@@ -53,10 +53,10 @@ public class JSNIAdapter extends PrinterAdapter {
     public String onBeforeWriteType(CompilationUnitTree compilationUnit, String tsContent) {
         // Process JSNI comment blocks before writing to file
         if (tsContent.contains("JSNI_METHOD_BEGIN")) {
-            System.out.println("🔍 JSNIAdapter: Processing JSNI comment blocks for compilation unit");
+            logger.debug("🔍 JSNIAdapter: Processing JSNI comment blocks for compilation unit");
             String processedContent = processJsniCommentBlocks(tsContent);
             if (!tsContent.equals(processedContent)) {
-                System.out.println("✅ JSNIAdapter: Processed JSNI methods");
+                logger.debug("✅ JSNIAdapter: Processed JSNI methods");
                 return processedContent;
             }
         }
