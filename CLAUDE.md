@@ -49,6 +49,11 @@ You can run the cli like so:
 ```bash 
 mvn exec:java -pl cli -Dexec.args="--output gwt-to-ts-test/gwt-ts/user-ts --target ES5 --excludes *bindery* --excludes *webgl* --excludes *websocket* --excludes *hibernate* --excludes *javax/validation* --excludes *validation* --excludes *logging --excludes *i18n* --excludes *rpc* --excludes *requestfactory* --excludes *autobean* --excludes *editor* --excludes *safehtml* --excludes *aria* --excludes dom/builder --excludes *junit* --excludes **/server/** --excludes **/vm/** gwt-to-ts-test/gwt-2.11.0/user/src"
 ```
+
+If you need to update the cli run: 
+1. `mvn compile -pl transpiler -DskipTests`
+2. `cd cli && mvn clean compile -DskipTests -q && cd ../`
+3. then mvn exec above.relo
 Note that you can exclude pacakges etc.
 
 

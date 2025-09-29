@@ -40,13 +40,21 @@ public class JSNIFactory extends JSweetFactory {
         // Chain GWTCreateAdapter
         System.out.println("   Chaining GWTCreateAdapter on top of EmptyRegisterEntryAdapter");
         GWTCreateAdapter gwtAdapter = new GWTCreateAdapter(emptyRegisterEntryAdapter);
-        
+
+        // Chain DOMImplAdapter to replace DOMImpl.impl_$LI$() calls
+        System.out.println("   Chaining DOMImplAdapter on top of GWTCreateAdapter");
+        DOMImplAdapter domImplAdapter = new DOMImplAdapter(gwtAdapter);
+
+        // Chain RemoveCastAdapter to remove .cast() calls
+        System.out.println("   Chaining RemoveCastAdapter on top of DOMImplAdapter");
+        RemoveCastAdapter removeCastAdapter = new RemoveCastAdapter(domImplAdapter);
+
         // Chain our JSNI adapter on top with source root path
-        System.out.println("   Chaining JSNIAdapter on top of GWTCreateAdapter");
-        JSNIAdapter jsniAdapter = new JSNIAdapter(gwtAdapter, sourceRootPath);
+        System.out.println("   Chaining JSNIAdapter on top of RemoveCastAdapter");
+        JSNIAdapter jsniAdapter = new JSNIAdapter(removeCastAdapter, sourceRootPath);
 
         System.out.println(
-            "✅ JSNIFactory: Adapter chain complete - JSNI support, GWT.isClient/create, and EmptyRegisterEntry enabled"
+            "✅ JSNIFactory: Adapter chain complete - JSNI support, cast() removal, DOMImpl replacement, GWT.isClient/create, and EmptyRegisterEntry enabled"
         );
         return jsniAdapter;
     }

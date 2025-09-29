@@ -52,10 +52,11 @@ public class GWTCreateAdapter extends PrinterAdapter {
 
         // Default mappings - can be extended
         typeMapping.put("source.gwt.Foo", "source.gwt.FooImpl");
+        typeMapping.put("com.google.gwt.dom.client.DOMImpl", "com.google.gwt.dom.client.DOMImplStandard");
     }
 
     /**
-     * Adds a mapping from interface/class to implementation class.
+     * Adds a mapping from interface/class to implementattion class.
      *
      * @param sourceType the fully qualified name of the interface/class used in GWT.create()
      * @param implType   the fully qualified name of the implementation class to instantiate

@@ -661,11 +661,10 @@ public class Java2TypeScriptTranslator extends AbstractTreePrinter {
                                 && context.referenceAnalyzer.isDependent(compilationUnit,
                                         (TypeElement) sourceElement))) {
 
-                    // import as footer statements to avoid cyclic dependencies
-                    // as much as possible
+                    // import at top to avoid initialization order issues
                     // note that the better way to avoid cyclic dependency
                     // issues is to create bundles
-                    context.addTopFooterStatement("import." + targetName,
+                    context.addHeader("import." + targetName,
                             "import { " + targetName + " } from '" + moduleName + "';\n");
 
                 } else {
