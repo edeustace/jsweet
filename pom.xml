@@ -150,8 +150,8 @@
         <module>typescript.java-ts.core</module>
         <module>core-lib/es5</module>
         <module>core-lib/es6</module>
-        <module>candy-generator-util</module>
-        <module>candy-generator</module>
+        <!-- <module>candy-generator-util</module> -->
+        <!-- <module>candy-generator</module> -->
         <module>transpiler</module>
         <module>cli</module>
     </modules>
