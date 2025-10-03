@@ -2,6 +2,8 @@
 
 This document describes the development workflow that you *MUST* follow to achieve success.
 
+For full context on the purpose of this repo read: ./CLAUDE.md.
+
 To achieve Success - we have to iterate through each issue. Fixing one issue will reveal another, so really it's like an onion skin approach we're taking.
 
 ## Success
@@ -27,6 +29,22 @@ To Achieve success we have to iterate through the steps below, fixing 1 error at
 4. Run `pnpm vite dev sample-ts` - to start the dev server
 5. Open the browser and check for runtime errors
 
+
+### Pipeline commands
+
+1. Compile CLI
+
+```bash
+mvn compile -pl transpiler -DskipTests
+cd cli && mvn clean compile -DskipTests -q && cd ../
+```
+
+2. Compile GWT Java -> TS
+```bash
+mvn exec:java -pl cli -Dexec.args="--output gwt-to-ts-test/gwt-ts/user-ts --target ES5 --excludes *webgl* --excludes *websocket* --excludes *hibernate* --excludes *javax/validation* --excludes *validation* --excludes *logging --excludes *i18n* --excludes *rpc* --excludes *requestfactory* --excludes *autobean* --excludes *editor* --excludes *safehtml* --excludes *aria* --excludes dom/builder --excludes *junit* --excludes **/server/** --excludes **/vm/** --excludes **/touch/** --excludes *bindery/autobean* --excludes *bindery/requestfactory* gwt-to-ts-test/gwt-2.11.0/user/src"
+```
+> Note that you can adjust the excludes here if you need to (aka if a module is not found and it's safe to pull in).
+
 You may get an error at any of these stages. For each error you get you are going to follow the same pattern: 
 
 > If the error is a java compile error eg just a minor mistake mid fix, you don't need to create a document for it. It's really more fundamental errors about the Java->TS conversion and getting GWT TS running that we need documented.
@@ -34,6 +52,7 @@ You may get an error at any of these stages. For each error you get you are goin
 1. document the error
 2. document thoughts
 3. fix the issues
+  a. If it's a java fix in the transpiler - add a test for it in our SnapshotTest.java file. link to test in document.
 4. document the fix
 5. commit the fix to the git repo
 
