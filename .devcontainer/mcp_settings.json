@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "pnpx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--isolated",
+        "--headless",
+        "--no-sandbox",
+        "--executable-path",
+        "/usr/bin/chromium"
+      ]
+    }
+  }
+}

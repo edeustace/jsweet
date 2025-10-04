@@ -1,0 +1,5 @@
+{
+  "launchOptions": {
+    "executablePath": "/usr/bin/chromium"
+  }
+}

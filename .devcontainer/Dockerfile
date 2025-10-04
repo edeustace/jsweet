@@ -25,7 +25,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   aggregate \
   jq \
   nano \
-  vim 
+  vim
+
+# Install Chromium and dependencies for headless browser
+RUN apt-get install -y --no-install-recommends \
+  chromium \
+  libnss3 \
+  libnspr4 \
+  libatk1.0-0 \
+  libatk-bridge2.0-0 \
+  libcups2 \
+  libdrm2 \
+  libdbus-1-3 \
+  libxkbcommon0 \
+  libxcomposite1 \
+  libxdamage1 \
+  libxfixes3 \
+  libxrandr2 \
+  libgbm1 \
+  libasound2 \
+  libpango-1.0-0 \
+  libcairo2 \
+  && apt-get clean && rm -rf /var/lib/apt/lists/* 
 
 
 # jdk - Install Temurin (Adoptium) OpenJDK 11
@@ -103,10 +124,14 @@ RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 # Install Playwright MCP via npm
 RUN pnpm install -g @playwright/mcp@latest
 
-RUN claude mcp add playwright \
-  --scope user \
-  pnpx @playwright/mcp@latest
+# Updated mcp_settings.json - 2025-10-04
+COPY mcp_settings.json /home/node/.claude/mcp_settings.json
 
+
+# Configure Playwright to use system Chromium
+ENV PLAYWRIGHT_BROWSER=chromium
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 
 RUN echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc
 
@@ -114,8 +139,9 @@ RUN echo 'mise trust' >> ~/.bashrc
 
 # Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/
+COPY init-claude-config.sh /usr/local/bin/
 USER root
-RUN chmod +x /usr/local/bin/init-firewall.sh && \
+RUN chmod +x /usr/local/bin/init-firewall.sh /usr/local/bin/init-claude-config.sh && \
   echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
   chmod 0440 /etc/sudoers.d/node-firewall
 USER node
